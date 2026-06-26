@@ -153,10 +153,11 @@ Exit criteria:
 | ID | Task | Status | Output |
 | --- | --- | --- | --- |
 | P5.1 | Define coarse checkpoint list. | done | `configs/experiments/pythia_410m_mvp_v0.yaml` defines the first `coarse_8` sweep. |
-| P5.2 | Run activation extraction over selected checkpoints. | todo | checkpoint activation artifacts |
-| P5.3 | Build AA and PC1 per checkpoint. | todo | vector/geometry artifacts |
-| P5.4 | Plot cosine-to-final, adjacent cosine, AA-PC1 alignment, PC1 variance, role-loading correlation. | todo | plot pack and report |
-| P5.5 | Select candidate emergence/refinement windows. | todo | decision record |
+| P5.2 | Build checkpoint sweep runner. | done | `scripts/analysis/run_checkpoint_sweep.py` orchestrates per-checkpoint activation, inspection, AA, role geometry, and report stages. |
+| P5.3 | Run activation extraction over selected checkpoints. | todo | checkpoint activation artifacts |
+| P5.4 | Build AA and PC1 per checkpoint. | todo | vector/geometry artifacts |
+| P5.5 | Plot cosine-to-final, adjacent cosine, AA-PC1 alignment, PC1 variance, role-loading correlation. | todo | plot pack and report |
+| P5.6 | Select candidate emergence/refinement windows. | todo | decision record |
 
 Exit criteria:
 

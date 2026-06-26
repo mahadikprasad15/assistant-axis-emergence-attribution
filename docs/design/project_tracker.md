@@ -58,7 +58,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Role geometry design | Done | `docs/design/role_geometry_builder_design.md` explains role/default means, PC1, loadings, and AA-PC1 alignment. |
 | Role geometry builder | Implemented, waiting on activations | `scripts/analysis/build_role_geometry.py` builds role/default mean vectors, PC1, loadings CSV, and geometry summary from activation + AA runs. |
 | Geometry sanity report | Implemented, waiting on geometry artifacts | `scripts/reporting/report_geometry.py` reads AA and role-geometry runs and writes `geometry_report.md`, `geometry_metrics.json`, and a proceed/caution/stop gate. |
-| Checkpoint sweep | Not started | Coarse 8-checkpoint list is defined in `configs/experiments/pythia_410m_mvp_v0.yaml`; run only after the final-checkpoint geometry report is defensible. |
+| Checkpoint sweep | Runner implemented, ready to run | `scripts/analysis/run_checkpoint_sweep.py` orchestrates activation, inspection, AA, role geometry, and report over the config's coarse 8 checkpoints. Run after the final-checkpoint geometry report is defensible. |
 | Steering tests | Not started | Need hook implementation and prompt set. |
 | Gradient attribution | Not started | Need Parquet loader, sampler, gradient scorer, and resumable run state. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
@@ -71,7 +71,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 4. Inspect the activation run with `scripts/activations/inspect_activation_run.py`.
 5. Build final-checkpoint AA and role PC1.
 6. Build the geometry report and read the proceed/caution/stop gate.
-7. If the report is defensible, run coarse checkpoint sweep.
+7. If the report is defensible, run `scripts/analysis/run_checkpoint_sweep.py`.
 8. Densify around candidate emergence/refinement windows.
 9. Implement Pythia Parquet stream loader with explicit checkpoint-window mapping.
 10. Run activation-gradient attribution on a debug sample.
@@ -179,17 +179,17 @@ Every run must include:
 | `RolloutCorpusBuilder` | done | `scripts/rollouts/build_rollout_corpus.py` | Build 1040 fixed default-vs-role rollout records. |
 | `FixedResponseImporter` | done | `scripts/rollouts/import_fixed_responses.py` | Validate and normalize generated/handwritten responses against rollout records. |
 | `FixedResponseGeneratorHarness` | done | `scripts/rollouts/generate_fixed_responses.py` | Create resumable fixed-response generation runs; currently smoke-only via `template_fixture`. |
-| `AssistantAxisBuilder` | done, not run | `scripts/analysis/build_assistant_axis.py` | Build checkpoint AA vectors. |
-| `RoleGeometryBuilder` | done, not run | `scripts/analysis/build_role_geometry.py` | Build role vectors, PC1, and loadings. |
-| `ReportBuilder` | done, not run | `scripts/reporting/report_geometry.py` | Build final-checkpoint geometry sanity report. |
+| `AssistantAxisBuilder` | done, final checkpoint run passed | `scripts/analysis/build_assistant_axis.py` | Build checkpoint AA vectors. |
+| `RoleGeometryBuilder` | done, final checkpoint run passed | `scripts/analysis/build_role_geometry.py` | Build role vectors, PC1, and loadings. |
+| `ReportBuilder` | done, final checkpoint run passed | `scripts/reporting/report_geometry.py` | Build final-checkpoint geometry sanity report. |
 
 ### Runners
 
 | Component | Status | Planned Script | Purpose |
 | --- | --- | --- | --- |
-| `FixedResponseGeneratorProvider` | implemented, not run | `scripts/rollouts/generate_fixed_responses.py` | Generate frozen responses for all 1040 rollout records using local Hugging Face model provider. |
-| `ActivationCacheRunner` | implemented, not run | `scripts/activations/cache_rollout_activations.py` | Cache pooled residual activations. |
-| `CheckpointSweepRunner` | todo | TBD wrapper or config-driven invocation | Run activation/vector stages over selected checkpoints. |
+| `FixedResponseGeneratorProvider` | done, VAST Llama run passed | `scripts/rollouts/generate_fixed_responses.py` | Generate frozen responses for all 1040 rollout records using local Hugging Face model provider. |
+| `ActivationCacheRunner` | done, final checkpoint run passed | `scripts/activations/cache_rollout_activations.py` | Cache pooled residual activations. |
+| `CheckpointSweepRunner` | done, ready to run | `scripts/analysis/run_checkpoint_sweep.py` | Run activation, inspection, AA, role geometry, and report stages over selected checkpoints. |
 | `GradientAttributionRunner` | todo | `scripts/analysis/score_training_sequence_gradients.py` | Score packed training sequences against local/final AA. |
 | `SteeringRunner` | later | `scripts/steering/run_axis_steering.py` | Test checkpoint-local causal steering. |
 

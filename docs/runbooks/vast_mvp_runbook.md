@@ -256,3 +256,37 @@ If the gate is `stop`, inspect:
 - default prompt family behavior,
 - response quality,
 - whether layer 12 is too early/late for the first readout.
+
+## Coarse Checkpoint Sweep
+
+After a `proceed` final-checkpoint report, run the configured coarse sweep:
+
+```bash
+.venv/bin/python scripts/analysis/run_checkpoint_sweep.py \
+  --response-jsonl data/rollouts/assistant_axis_rollouts_v0_responses.jsonl \
+  --hf-cache-dir .cache/huggingface \
+  --activation-batch-size 8 \
+  --sweep-run-id coarse8-full-v0
+```
+
+This runs, per checkpoint:
+
+```text
+activation cache -> activation inspection -> Assistant Axis -> role geometry -> geometry report
+```
+
+The configured checkpoints are:
+
+```text
+step0, step1000, step5000, step10000, step20000, step40000, step80000, step143000
+```
+
+The existing `step143000` artifacts will be skipped by the underlying stage scripts if their status files already say `completed`.
+
+Sweep summary:
+
+```text
+artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/checkpoint-sweep-layer12/coarse8-full-v0/results/checkpoint_sweep_summary.json
+```
+
+If interrupted, rerun the same command. Completed stage outputs are detected from their run directories and skipped by the stage scripts.
