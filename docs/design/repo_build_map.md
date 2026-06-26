@@ -255,7 +255,8 @@ Current runner commands:
   --hf-model-id meta-llama/Llama-3.2-1B-Instruct \
   --variant llama-3.2-1b-instruct \
   --run-id llama-3.2-1b-full-v0 \
-  --hf-cache-dir .cache/huggingface
+  --hf-cache-dir .cache/huggingface \
+  --batch-size 20
 
 .venv/bin/python scripts/rollouts/generate_fixed_responses.py \
   --provider hf_local \

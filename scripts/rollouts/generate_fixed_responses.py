@@ -176,7 +176,7 @@ def build_hf_prompt(
     return user_text
 
 
-def load_hf_local_generator(args: argparse.Namespace) -> Callable[[dict[str, Any]], str]:
+def load_hf_local_generator(args: argparse.Namespace) -> Callable[[list[dict[str, Any]]], list[str]]:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -198,15 +198,18 @@ def load_hf_local_generator(args: argparse.Namespace) -> Callable[[dict[str, Any
     )
     model.eval()
 
-    def generate(rollout: dict[str, Any]) -> str:
-        prompt_text = build_hf_prompt(
-            tokenizer,
-            rollout["prompt_text"],
-            args.use_chat_template,
-            args.system_prompt,
-            args.user_suffix,
-        )
-        encoded = tokenizer(prompt_text, return_tensors="pt", padding=True)
+    def generate_batch(rollouts: list[dict[str, Any]]) -> list[str]:
+        prompt_texts = [
+            build_hf_prompt(
+                tokenizer,
+                rollout["prompt_text"],
+                args.use_chat_template,
+                args.system_prompt,
+                args.user_suffix,
+            )
+            for rollout in rollouts
+        ]
+        encoded = tokenizer(prompt_texts, return_tensors="pt", padding=True)
         encoded = {key: value.to(model.device) for key, value in encoded.items()}
         input_width = int(encoded["input_ids"].shape[1])
         generation_kwargs = {
@@ -220,16 +223,19 @@ def load_hf_local_generator(args: argparse.Namespace) -> Callable[[dict[str, Any
         generation_kwargs = {key: value for key, value in generation_kwargs.items() if value is not None}
         with torch.inference_mode():
             output_ids = model.generate(**encoded, **generation_kwargs)
-        completion_ids = output_ids[0, input_width:]
-        return tokenizer.decode(completion_ids, skip_special_tokens=True).strip()
+        responses = []
+        for row in output_ids:
+            completion_ids = row[input_width:]
+            responses.append(tokenizer.decode(completion_ids, skip_special_tokens=True).strip())
+        return responses
 
-    return generate
+    return generate_batch
 
 
 def build_response_record(
     rollout: dict[str, Any],
     args: argparse.Namespace,
-    generator: Callable[[dict[str, Any]], str] | None,
+    raw_generated_response: str | None = None,
 ) -> dict[str, Any]:
     if args.provider == "template_fixture":
         generated_response = template_fixture_response(rollout)
@@ -241,8 +247,7 @@ def build_response_record(
             "provider": args.provider,
             "intended_use": "smoke_test_only",
         }
-    elif args.provider == "hf_local" and generator is not None:
-        raw_generated_response = generator(rollout)
+    elif args.provider == "hf_local" and raw_generated_response is not None:
         generated_response = clean_generated_response(
             raw_generated_response,
             strip_lists=args.strip_lists,
@@ -267,6 +272,7 @@ def build_response_record(
             "torch_dtype": args.torch_dtype,
             "device_map": args.device_map,
             "local_files_only": args.local_files_only,
+            "batch_size": args.batch_size,
         }
     else:
         raise NotImplementedError(f"unsupported provider: {args.provider}")
@@ -352,6 +358,7 @@ def write_manifest(
                 "device_map": args.device_map,
                 "local_files_only": args.local_files_only,
                 "hf_cache_dir": str(args.hf_cache_dir) if args.hf_cache_dir else None,
+                "batch_size": args.batch_size,
             },
             "rollout_jsonl": {
                 "path": str(rollout_jsonl),
@@ -399,6 +406,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--torch-dtype", choices=["auto", "float16", "bfloat16", "float32"], default="auto")
     parser.add_argument("--device-map", default="auto")
     parser.add_argument("--max-new-tokens", type=int, default=192)
+    parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--do-sample", action="store_true")
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--top-p", type=float, default=1.0)
@@ -431,6 +439,8 @@ def main() -> int:
         raise SystemExit("--save-every must be positive")
     if args.max_new_tokens < 1:
         raise SystemExit("--max-new-tokens must be positive")
+    if args.batch_size < 1:
+        raise SystemExit("--batch-size must be positive")
 
     run_dir = resolve_run_dir(args)
     inputs_dir = run_dir / "inputs"
@@ -470,16 +480,38 @@ def main() -> int:
     cursor = 0
     try:
         generator = load_hf_local_generator(args) if args.provider == "hf_local" else None
+        pending_batch: list[dict[str, Any]] = []
+
+        def flush_batch(batch: list[dict[str, Any]], batch_cursor: int) -> None:
+            if not batch:
+                return
+            if args.provider == "hf_local":
+                if generator is None:
+                    raise RuntimeError("hf_local provider missing generator")
+                raw_responses = generator(batch)
+            else:
+                raw_responses = [None for _ in batch]
+            if len(raw_responses) != len(batch):
+                raise RuntimeError(
+                    f"generator returned {len(raw_responses)} responses for batch of {len(batch)} rollouts"
+                )
+            for rollout, raw_response in zip(batch, raw_responses):
+                response_record = build_response_record(rollout, args, raw_response)
+                append_jsonl(result_jsonl, response_record)
+                completed_ids.add(str(rollout["rollout_id"]))
+            if len(completed_ids) % args.save_every < len(batch):
+                write_progress(progress_path, selected_ids, completed_ids, batch_cursor)
+                append_log(log_path, "progress", {"cursor": batch_cursor, "completed": len(completed_ids)})
+
         for cursor, rollout in enumerate(rollouts, start=1):
             rollout_id = str(rollout["rollout_id"])
             if rollout_id in completed_ids:
                 continue
-            response_record = build_response_record(rollout, args, generator)
-            append_jsonl(result_jsonl, response_record)
-            completed_ids.add(rollout_id)
-            if len(completed_ids) % args.save_every == 0:
-                write_progress(progress_path, selected_ids, completed_ids, cursor)
-                append_log(log_path, "progress", {"cursor": cursor, "completed": len(completed_ids)})
+            pending_batch.append(rollout)
+            if len(pending_batch) >= args.batch_size:
+                flush_batch(pending_batch, cursor)
+                pending_batch = []
+        flush_batch(pending_batch, cursor)
         final_state = "completed" if len(completed_ids) == len(selected_ids) else "failed"
         final_message = (
             "fixed response generation completed" if final_state == "completed" else "missing generated responses"

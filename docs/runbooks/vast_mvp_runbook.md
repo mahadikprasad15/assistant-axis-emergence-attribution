@@ -20,7 +20,7 @@ On an A5000, budget conservatively:
 | Stage | Expected Time |
 | --- | --- |
 | Environment and model downloads | 10-30 min |
-| Llama 3.2 1B fixed responses, 1040 records | 30-90 min with the current one-record-at-a-time runner |
+| Llama 3.2 1B fixed responses, 1040 records | 10-40 min with batched generation, depending sequence length and GPU memory |
 | Response import/validation | seconds to minutes |
 | Pythia-410M final-checkpoint activations | 10-30 min |
 | AA vector, role geometry, report | seconds to minutes |
@@ -83,6 +83,7 @@ Primary run: Llama 3.2 1B Instruct.
   --run-id llama-3.2-1b-full-v0 \
   --hf-cache-dir .cache/huggingface \
   --max-new-tokens 192 \
+  --batch-size 20 \
   --temperature 0.0 \
   --save-every 25
 ```
@@ -100,7 +101,8 @@ Resume the same run if interrupted:
   --resume-run-dir artifacts/runs/assistant_axis_attribution/fixed-response-generator/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/llama-3.2-1b-instruct/llama-3.2-1b-full-v0 \
   --provider hf_local \
   --hf-model-id meta-llama/Llama-3.2-1B-Instruct \
-  --hf-cache-dir .cache/huggingface
+  --hf-cache-dir .cache/huggingface \
+  --batch-size 20
 ```
 
 Fallback only if Llama access fails:
@@ -113,6 +115,7 @@ Fallback only if Llama access fails:
   --run-id qwen2.5-0.5b-full-v0 \
   --hf-cache-dir .cache/huggingface \
   --max-new-tokens 192 \
+  --batch-size 20 \
   --temperature 0.0 \
   --save-every 25
 ```
