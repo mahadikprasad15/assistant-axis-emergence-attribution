@@ -342,3 +342,44 @@ Plot report:
 ```bash
 cat artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-plots-layer12/coarse8-full-v0/results/plot_report.md
 ```
+
+## Upload Artifacts To Hugging Face
+
+Use `HF_TOKEN`; do not use `huggingface-cli login` on VAST.
+
+Dry run first:
+
+```bash
+.venv/bin/python scripts/reporting/upload_artifacts_to_hf.py \
+  --repo-id YOUR_HF_USERNAME/assistant-axis-pythia410m-mvp-artifacts \
+  --repo-type dataset \
+  --path-in-repo pythia410m-mvp-v0 \
+  --private \
+  --dry-run
+```
+
+If the dry run finds all required artifacts, upload:
+
+```bash
+.venv/bin/python scripts/reporting/upload_artifacts_to_hf.py \
+  --repo-id YOUR_HF_USERNAME/assistant-axis-pythia410m-mvp-artifacts \
+  --repo-type dataset \
+  --path-in-repo pythia410m-mvp-v0 \
+  --private
+```
+
+The uploader creates the dataset repo if it does not already exist. It uploads the curated MVP artifact set:
+
+- role-faithful fixed responses and manifest,
+- Llama fixed-response generation run,
+- final-checkpoint activation, AA, role-geometry, and report runs,
+- coarse checkpoint sweep run,
+- trajectory analysis run,
+- trajectory plot run.
+
+It does not upload:
+
+- `.cache/huggingface`,
+- `.venv`,
+- model downloads,
+- `__pycache__`.

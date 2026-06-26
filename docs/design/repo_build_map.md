@@ -312,6 +312,7 @@ Analyzers compute metrics from existing artifacts.
 | `AttributionSummaryAnalyzer` | scored training sequences | top/bottom tables and aggregate summaries |
 | `GeometryReportBuilder` | AA summary plus role geometry summary/loadings | sanity report and proceed/caution/stop gate |
 | `AxisTrajectoryPlotter` | trajectory CSVs | cosine, geometry-quality, loading-correlation, transition-score, and moving-role plots |
+| `HFArtifactUploader` | curated artifact paths | private HF dataset upload plus upload manifest |
 
 Analyzer rules:
 

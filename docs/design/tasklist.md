@@ -161,6 +161,7 @@ Exit criteria:
 | P5.7 | Add plots for trajectory metrics. | done | `scripts/reporting/plot_axis_trajectory.py` |
 | P5.7A | Run trajectory plotter on completed trajectory artifacts. | todo | cosine, geometry-quality, loading-correlation, transition-score, and moving-role PNGs |
 | P5.8 | Select candidate emergence/refinement windows. | todo | decision record |
+| P5.9 | Upload curated MVP artifacts to Hugging Face. | todo | private HF dataset repo containing fixed responses, final checkpoint artifacts, sweep, trajectory, and plots |
 
 Exit criteria:
 

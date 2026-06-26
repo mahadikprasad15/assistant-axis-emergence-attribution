@@ -61,6 +61,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Checkpoint sweep | Runner implemented, ready to run | `scripts/analysis/run_checkpoint_sweep.py` orchestrates activation, inspection, AA, role geometry, and report over the config's coarse 8 checkpoints. Run after the final-checkpoint geometry report is defensible. |
 | Axis trajectory analyzer | Implemented, waiting on sweep artifacts | `scripts/analysis/analyze_axis_trajectory.py` computes cosine-to-final, adjacent cosine, AA-PC1, PC1 EVR, loading correlations, moving roles, and candidate transition windows. |
 | Axis trajectory plots | Implemented, waiting on trajectory artifacts | `scripts/reporting/plot_axis_trajectory.py` writes cosine, geometry-quality, loading-correlation, transition-score, and moving-role plots. |
+| HF artifact upload | Implemented, waiting on VAST artifacts | `scripts/reporting/upload_artifacts_to_hf.py` uploads the curated MVP artifact set to a private HF dataset repo using `HF_TOKEN`. |
 | Steering tests | Not started | Need hook implementation and prompt set. |
 | Gradient attribution | Not started | Need Parquet loader, sampler, gradient scorer, and resumable run state. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
