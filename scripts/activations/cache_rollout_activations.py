@@ -11,6 +11,22 @@ from pathlib import Path
 from typing import Any
 
 
+def make_progress_bar(total: int, initial: int, enabled: bool) -> Any:
+    if not enabled:
+        return None
+    try:
+        from tqdm.auto import tqdm
+    except ImportError:
+        return None
+    return tqdm(
+        total=total,
+        initial=initial,
+        desc="activation records",
+        unit="record",
+        dynamic_ncols=True,
+    )
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -222,6 +238,11 @@ def write_manifest(
                 "selected_count": selected_count,
                 "completed_count": completed_count,
             },
+            "execution": {
+                "batch_size": args.batch_size,
+                "save_every": args.save_every,
+                "progress_enabled": not args.no_progress,
+            },
         },
     )
 
@@ -324,6 +345,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--local-files-only", action="store_true")
     parser.add_argument("--torch-dtype", choices=["auto", "float16", "bfloat16", "float32"], default="auto")
     parser.add_argument("--device-map", default="auto")
+    parser.add_argument("--no-progress", action="store_true")
     parser.add_argument("--force-completed", action="store_true")
     return parser
 
@@ -373,6 +395,11 @@ def main() -> int:
     write_json(inputs_dir / "selected_rollout_ids.json", {"rollout_ids": selected_ids})
 
     cursor = 0
+    progress_bar = make_progress_bar(
+        total=len(selected_ids),
+        initial=len(completed_ids),
+        enabled=not args.no_progress,
+    )
     try:
         model, tokenizer = load_model_and_tokenizer(args)
         pending_batch: list[dict[str, Any]] = []
@@ -383,20 +410,43 @@ def main() -> int:
             pending_batch.append(record)
             if len(pending_batch) < args.batch_size:
                 continue
-            completed_ids.update(cache_batch(pending_batch, args, model, tokenizer, activations_dir, index_path))
+            batch_completed_ids = cache_batch(pending_batch, args, model, tokenizer, activations_dir, index_path)
+            completed_ids.update(batch_completed_ids)
+            if progress_bar is not None:
+                progress_bar.update(len(batch_completed_ids))
+                progress_bar.set_postfix(
+                    {
+                        "batch": len(batch_completed_ids),
+                        "done": len(completed_ids),
+                    },
+                    refresh=True,
+                )
             pending_batch = []
             if len(completed_ids) % args.save_every == 0:
                 write_progress(progress_path, selected_ids, completed_ids, cursor)
                 append_log(log_path, "progress", {"cursor": cursor, "completed": len(completed_ids)})
 
         if pending_batch:
-            completed_ids.update(cache_batch(pending_batch, args, model, tokenizer, activations_dir, index_path))
+            batch_completed_ids = cache_batch(pending_batch, args, model, tokenizer, activations_dir, index_path)
+            completed_ids.update(batch_completed_ids)
+            if progress_bar is not None:
+                progress_bar.update(len(batch_completed_ids))
+                progress_bar.set_postfix(
+                    {
+                        "batch": len(batch_completed_ids),
+                        "done": len(completed_ids),
+                    },
+                    refresh=True,
+                )
         final_state = "completed" if len(completed_ids) == len(selected_ids) else "failed"
         final_message = "activation caching completed" if final_state == "completed" else "missing activation records"
     except Exception as exc:
         final_state = "failed"
         final_message = f"activation caching failed: {type(exc).__name__}: {exc}"
         append_log(log_path, "error", {"error_type": type(exc).__name__, "message": str(exc)})
+    finally:
+        if progress_bar is not None:
+            progress_bar.close()
 
     write_progress(progress_path, selected_ids, completed_ids, cursor)
     write_status(

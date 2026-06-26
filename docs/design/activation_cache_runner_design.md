@@ -104,3 +104,7 @@ On start, the runner reads the activation index and skips a rollout only if:
 Progress metadata alone is not sufficient.
 
 This implements the failure-learning rule from `docs/learning/failure_learning_log.md`.
+
+## Progress Rule
+
+Full activation runs show a live `tqdm` progress bar by default after model download. The progress bar should include completed records, total records, and batch size. Use `--no-progress` only for log-only environments where terminal progress rendering is undesirable.

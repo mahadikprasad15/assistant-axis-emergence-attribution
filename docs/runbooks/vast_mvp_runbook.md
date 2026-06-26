@@ -137,6 +137,7 @@ Proceed only if this writes a full validated response file and manifest.
 ## Step 3: Cache Pythia Final-Checkpoint Activations
 
 This is the first serious Pythia run. It uses fixed Llama responses and does not generate with Pythia.
+After the model download, this shows an `activation records` progress bar by default.
 
 ```bash
 .venv/bin/python scripts/activations/cache_rollout_activations.py \
