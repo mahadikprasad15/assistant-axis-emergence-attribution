@@ -11,15 +11,16 @@ from pathlib import Path
 from typing import Any
 
 
-BLUE = "#2b6cb0"
-LIGHT_BLUE = "#6fb6f2"
-GREEN = "#4aa832"
-GOLD = "#d8bf00"
-ORANGE = "#f2992e"
-RED = "#c93a2e"
+BLUE = "#2f6fae"
+LIGHT_BLUE = "#79b7e8"
+GREEN = "#4f9a5b"
+GOLD = "#c8aa00"
+ORANGE = "#d9902f"
+RED = "#b84a4a"
 GRAY = "#6b7280"
 DARK = "#1f2937"
-GRID = "#e5e7eb"
+GRID = "#e7eaf0"
+SUBTLE = "#f6f7f9"
 
 
 def utc_now() -> str:
@@ -101,9 +102,10 @@ def setup_matplotlib() -> Any:
             "ytick.color": DARK,
             "text.color": DARK,
             "font.size": 10,
-            "axes.titlesize": 12,
+            "axes.titlesize": 13,
             "axes.titleweight": "bold",
             "legend.frameon": False,
+            "lines.solid_capstyle": "round",
         }
     )
     return plt
@@ -113,29 +115,54 @@ def clean_axes(ax: Any) -> None:
     ax.grid(True, axis="y", color=GRID, linewidth=0.8)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#cfd5dd")
+    ax.spines["bottom"].set_color("#cfd5dd")
+
+
+def checkpoint_x(step: int) -> float:
+    return math.log2(step + 1)
+
+
+def checkpoint_tick_labels(steps: list[int], labels: list[str]) -> tuple[list[float], list[str]]:
+    return [checkpoint_x(step) for step in steps], labels
+
+
+def add_checkpoint_bands(ax: Any, xs: list[float]) -> None:
+    if len(xs) < 3:
+        return
+    for index in range(0, len(xs) - 1, 2):
+        ax.axvspan(xs[index], xs[index + 1], color=SUBTLE, alpha=0.75, zorder=0)
 
 
 def save_line_plot(
     plt: Any,
     path: Path,
-    xs: list[int],
+    steps: list[int],
     labels: list[str],
     series: list[tuple[str, list[float | None], str, str]],
     title: str,
     ylabel: str,
+    subtitle: str | None = None,
 ) -> None:
-    fig, ax = plt.subplots(figsize=(9, 4.8))
+    xs, tick_labels = checkpoint_tick_labels(steps, labels)
+    fig, ax = plt.subplots(figsize=(10.5, 5.4))
+    add_checkpoint_bands(ax, xs)
     for name, values, color, marker in series:
         y = [float("nan") if value is None else value for value in values]
-        ax.plot(xs, y, marker=marker, linewidth=2, markersize=5, color=color, label=name)
+        ax.plot(xs, y, marker=marker, linewidth=2.2, markersize=5.5, color=color, label=name, zorder=3)
     ax.set_title(title)
+    if subtitle:
+        ax.text(0.0, 1.01, subtitle, transform=ax.transAxes, color=GRAY, fontsize=9, va="bottom")
     ax.set_ylabel(ylabel)
-    ax.set_xlabel("Pythia checkpoint step")
+    ax.set_xlabel("Pythia checkpoint, spaced by log2(step + 1)")
     ax.set_xticks(xs)
-    ax.set_xticklabels(labels, rotation=35, ha="right")
-    ax.set_ylim(bottom=-1.05, top=1.05 if "cosine" in ylabel.lower() else None)
+    ax.set_xticklabels(tick_labels, rotation=28, ha="right", fontsize=9)
+    ax.margins(x=0.025)
+    if "cosine" in ylabel.lower() or "correlation" in ylabel.lower():
+        ax.axhline(0.0, color="#a9b2bd", linewidth=0.9, zorder=1)
+        ax.set_ylim(bottom=-1.05, top=1.05)
     clean_axes(ax)
-    ax.legend(loc="best")
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, -0.35), ncol=2)
     fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=180)
@@ -143,14 +170,18 @@ def save_line_plot(
 
 
 def save_transition_plot(plt: Any, path: Path, rows: list[dict[str, Any]]) -> None:
-    labels = [f"{row['from_revision']}->{row['to_revision']}" for row in rows]
-    values = [as_float(row.get("transition_score")) or 0.0 for row in rows]
-    fig, ax = plt.subplots(figsize=(9, 4.8))
-    ax.bar(labels, values, color=ORANGE)
+    plot_rows = list(reversed(rows))
+    labels = [f"{row['from_revision']} -> {row['to_revision']}" for row in plot_rows]
+    values = [as_float(row.get("transition_score")) or 0.0 for row in plot_rows]
+    colors = [ORANGE if index >= len(values) - 3 else "#d7dee8" for index in range(len(values))]
+    fig, ax = plt.subplots(figsize=(9.5, max(4.8, 0.38 * len(labels))))
+    ax.barh(labels, values, color=colors)
     ax.set_title("Candidate Transition Windows")
-    ax.set_ylabel("transition score, higher means more change")
-    ax.set_xlabel("checkpoint interval")
-    ax.tick_params(axis="x", rotation=35)
+    ax.set_xlabel("transition score; higher means more geometry change")
+    ax.set_ylabel("")
+    ax.tick_params(axis="y", labelsize=9)
+    for label, value in zip(labels, values, strict=True):
+        ax.text(value, label, f" {value:.2f}", va="center", ha="left", fontsize=8, color=GRAY)
     clean_axes(ax)
     fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -163,7 +194,7 @@ def save_moving_roles_plot(plt: Any, path: Path, rows: list[dict[str, Any]]) -> 
     labels = [row["group_id"] for row in plot_rows]
     values = [as_float(row.get("delta_to_final")) or 0.0 for row in plot_rows]
     colors = [BLUE if value >= 0 else RED for value in values]
-    fig, ax = plt.subplots(figsize=(8, max(4.8, 0.34 * len(labels))))
+    fig, ax = plt.subplots(figsize=(9, max(4.8, 0.36 * len(labels))))
     ax.barh(labels, values, color=colors)
     ax.axvline(0.0, color="#374151", linewidth=1)
     ax.set_title("Top Moving Roles By AA Loading")
@@ -254,6 +285,8 @@ def main() -> int:
     xs = [as_int(row["step"]) or 0 for row in trajectory_rows]
     labels = [row["revision"] for row in trajectory_rows]
     plt = setup_matplotlib()
+    final_revision = summary.get("final_revision", "final")
+    subtitle = f"Reference endpoint: {final_revision}; x-axis uses log spacing so early checkpoints remain readable."
 
     plot_paths = {
         "cosine trajectory": plots_dir / "cosine_trajectory.png",
@@ -275,6 +308,7 @@ def main() -> int:
         ],
         "AA and PC1 Cosine Trajectory",
         "cosine",
+        subtitle,
     )
     save_line_plot(
         plt,
@@ -287,6 +321,7 @@ def main() -> int:
         ],
         "Per-Checkpoint Geometry Quality",
         "metric value",
+        subtitle,
     )
     save_line_plot(
         plt,
@@ -301,6 +336,7 @@ def main() -> int:
         ],
         "Role Loading Correlations",
         "Pearson correlation",
+        subtitle,
     )
     save_transition_plot(plt, plot_paths["transition scores"], transition_rows)
     save_moving_roles_plot(plt, plot_paths["top moving roles"], moving_role_rows[:20])
