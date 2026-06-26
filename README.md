@@ -10,11 +10,11 @@ The MVP target is:
 - Official packed stream fallback: `EleutherAI/pile-deduped-pythia-preshuffled`
 - Raw text/source lookup: `EleutherAI/the_pile_deduplicated` and, where useful, `pietrolesci/pile-deduped`
 
-The core claim is intentionally modest:
+The core claim:
 
 > We trace an Assistant-Axis-like direction through open pretraining checkpoints, identify periods where its geometry stabilizes or changes rapidly, and test whether training sequences in those periods exert first-order gradient pressure toward that direction.
 
-The project should not claim that it has identified the exact documents that created the Assistant Axis. The initial attribution unit is a packed Pythia training sequence, not a clean raw document.
+The project does not claim that it has identified the exact documents that created the Assistant Axis. The initial attribution unit is a packed Pythia training sequence, not a clean raw document.
 
 ## Project Docs
 
