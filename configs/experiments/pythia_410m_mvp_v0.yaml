@@ -1,0 +1,128 @@
+schema_version: 0.1
+experiment_id: pythia_410m_mvp_v0
+description: >
+  First Pythia-410M-deduped vertical slice for Assistant Axis trajectory and
+  attribution. This config wires the rollout corpus, model, checkpoint list,
+  activation layer, and pooling policy.
+
+model_config: configs/models/pythia_410m_deduped.yaml
+rollout_config: configs/rollouts/assistant_axis_roles_v0.yaml
+rollout_jsonl: data/rollouts/assistant_axis_rollouts_v0.jsonl
+rollout_manifest: data/rollouts/assistant_axis_rollouts_v0_manifest.json
+
+fixed_response_policy:
+  required_for_main_activation_runs: true
+  response_source: generated_once_external_model
+  generated_response_jsonl: data/rollouts/assistant_axis_rollouts_v0_responses.jsonl
+  generated_response_manifest: data/rollouts/assistant_axis_rollouts_v0_responses_manifest.json
+  note: >
+    Main activation extraction uses response-token mean pooling. Therefore each
+    rollout prompt needs a fixed generated response and prompt/response token
+    boundary metadata before serious geometry runs. Do not ask every Pythia
+    checkpoint to generate its own responses.
+
+checkpoint_sweep:
+  first_pass_name: coarse_8
+  checkpoints:
+    - revision: step0
+      step: 0
+      reason: initialization baseline
+    - revision: step1000
+      step: 1000
+      reason: very early learned structure
+    - revision: step5000
+      step: 5000
+      reason: early formation
+    - revision: step10000
+      step: 10000
+      reason: early formation
+    - revision: step20000
+      step: 20000
+      reason: middle development
+    - revision: step40000
+      step: 40000
+      reason: middle development
+    - revision: step80000
+      step: 80000
+      reason: late development
+    - revision: step143000
+      step: 143000
+      reason: final target checkpoint
+  densify_policy:
+    trigger: >
+      Add surrounding 1000-step checkpoints where cosine-to-final rises rapidly,
+      adjacent-checkpoint cosine dips, AA-PC1 alignment changes, role loadings
+      reorganize, or steering first appears.
+
+activation_extraction:
+  layer_policy:
+    mode: explicit
+    layers:
+      - 12
+    layer_index_base: zero
+    rationale: middle residual layer for 24-layer Pythia-410M.
+  pooling_policy:
+    primary: response_token_mean
+    debug_fallback: full_text_mean
+    debug_fallback_allowed_for_main_results: false
+    rationale: >
+      Response-token mean avoids pooling over the role/default instruction
+      prefix. Full-text mean is allowed only for smoke tests where fixed
+      responses are unavailable.
+  batch_size:
+    activation_records: 8
+    note: tune based on local/GPU memory.
+
+axis_construction_variants:
+  - variant_id: aa_main
+    default_prompt_ids:
+      - helpful_assistant
+      - large_language_model
+    contrast_role_groups:
+      - non_assistant_non_neutral
+    diagnostic_role_groups:
+      - assistant_like
+      - neutral_control
+    rationale: >
+      Main axis contrasts default assistant-like prompts against non-default,
+      non-neutral roles without subtracting assistant-like roles from the
+      contrast mean.
+  - variant_id: aa_all_defaults_sensitivity
+    default_prompt_ids:
+      - helpful_assistant
+      - large_language_model
+      - respond_as_yourself
+      - bare_question
+    contrast_role_groups:
+      - non_assistant_non_neutral
+    diagnostic_role_groups:
+      - assistant_like
+      - neutral_control
+    rationale: Tests sensitivity to ambiguous default prompt families.
+  - variant_id: aa_all_roles_sensitivity
+    default_prompt_ids:
+      - helpful_assistant
+      - large_language_model
+    contrast_role_groups:
+      - assistant_like
+      - non_assistant_non_neutral
+      - neutral_control
+    diagnostic_role_groups: []
+    rationale: Tests whether the axis changes when all roles are used as the role mean.
+
+artifact_layout:
+  output_root: artifacts/runs
+  experiment_name: assistant_axis_attribution
+  model_name: pythia-410m-deduped
+  dataset_name: fixed-aa-rollouts-v0
+  probe_set: assistant-axis-rollouts-v0
+  variant: response-token-mean-layer12-coarse8
+
+completion_gates:
+  before_activation_main:
+    - fixed generated responses exist and have a manifest.
+    - prompt/response token boundary can be recovered for every record.
+    - placeholder role instructions have been source-verified or explicitly accepted.
+  before_checkpoint_sweep:
+    - one-checkpoint activation smoke run passes.
+    - activation record schema and index format are validated.

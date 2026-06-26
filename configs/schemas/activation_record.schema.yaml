@@ -1,0 +1,89 @@
+schema_version: 0.1
+schema_id: activation_record
+description: >
+  Contract for one activation index record produced by the activation cache
+  runner. The actual activation tensor may live in a separate artifact file.
+
+required_fields:
+  activation_id:
+    type: string
+    description: Stable id for this rollout/checkpoint/layer/pooling activation.
+  rollout_id:
+    type: string
+    description: Links back to data/rollouts/assistant_axis_rollouts_v0.jsonl.
+  record_type:
+    type: string
+    allowed:
+      - role
+      - default
+  model_repo_id:
+    type: string
+    expected: EleutherAI/pythia-410m-deduped
+  checkpoint_revision:
+    type: string
+    examples:
+      - step0
+      - step40000
+      - step143000
+  checkpoint_step:
+    type: integer
+  layer:
+    type: integer
+    description: Zero-indexed transformer block layer.
+  hook_name:
+    type: string
+    description: Backend-specific activation hook name.
+  pooling_policy:
+    type: string
+    allowed:
+      - response_token_mean
+      - full_text_mean
+  prompt_token_count:
+    type: integer
+  response_token_count:
+    type: integer
+  pooled_shape:
+    type: array
+    expected_for_pythia_410m_layer_mean:
+      - 1024
+  activation_path:
+    type: string
+    description: Path to serialized tensor payload.
+  source:
+    type: object
+    description: Run/config provenance and input artifact paths.
+
+required_when_pooling_response_tokens:
+  generated_response:
+    type: string
+    description: Frozen response text used to define response-token span.
+  response_token_start:
+    type: integer
+    description: Inclusive token offset where response tokens begin.
+  response_token_end:
+    type: integer
+    description: Exclusive token offset where response tokens end.
+
+payload_contract:
+  suggested_tensor_key: pooled_resid
+  tensor_shape: [1024]
+  suggested_metadata_keys:
+    - activation_id
+    - rollout_id
+    - checkpoint_revision
+    - checkpoint_step
+    - layer
+    - pooling_policy
+    - prompt_token_count
+    - response_token_count
+
+validation_rules:
+  - response_token_mean records must have response_token_count > 0.
+  - response_token_start must be less than response_token_end.
+  - pooled_shape must match model hidden size for the selected layer.
+  - activation_path must exist before a record is considered complete.
+  - full_text_mean is allowed for smoke tests but not for main geometry results.
+
+notes:
+  - This schema describes activation index rows, not the full tensor serialization format.
+  - Main MVP geometry should use response_token_mean over fixed generated responses.

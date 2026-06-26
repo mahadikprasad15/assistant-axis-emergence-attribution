@@ -1,0 +1,43 @@
+schema_version: 0.1
+schema_id: geometry_manifest
+description: >
+  Manifest contract for Assistant Axis and role-geometry builder runs.
+
+required_fields:
+  schema_version:
+    type: string
+  builder:
+    type: string
+  created_at_utc:
+    type: string
+  run_dir:
+    type: string
+  experiment_config:
+    type: object
+    required_keys:
+      - path
+      - sha256
+  activation_run:
+    type: object
+    required_keys:
+      - run_dir
+      - activation_index_jsonl
+  variant:
+    type: object
+    required_keys:
+      - variant_id
+      - default_prompt_ids
+      - contrast_role_groups
+  outputs:
+    type: object
+  validation:
+    type: object
+    required_keys:
+      - passed
+      - errors
+      - warnings
+
+validation_rules:
+  - Input activation index must contain records for one checkpoint/layer/pooling policy.
+  - Output axis vector tensor must exist.
+  - Summary JSON must record counts and vector norm.

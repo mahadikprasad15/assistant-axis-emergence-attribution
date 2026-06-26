@@ -1,0 +1,213 @@
+schema_version: 0.1
+source_material_id: assistant_axis_source_material_v0
+description: >
+  Source-pinned Assistant Axis material imported from the earlier
+  trait-geometry repo. This file records what can be reused for the Pythia
+  Assistant Axis attribution project and what must change before rollout
+  corpus construction.
+
+local_reference_repo:
+  name: Do traits remain consistent across personas?
+  path: /Users/prasadmahadik/Documents/Do traits remain consistent across personas?
+
+assistant_axis_source:
+  repository: safety-research/assistant-axis
+  repository_url: https://github.com/safety-research/assistant-axis
+  role_instructions_url: https://github.com/safety-research/assistant-axis/tree/master/data/roles/instructions
+  trait_list_url: https://raw.githubusercontent.com/safety-research/assistant-axis/master/data/traits/trait_list.json
+  questions_url: https://raw.githubusercontent.com/safety-research/assistant-axis/master/data/extraction_questions.jsonl
+
+imported_local_assets:
+  role_config:
+    path: /Users/prasadmahadik/Documents/Do traits remain consistent across personas?/configs/personas/core_roles.yaml
+    sha256: 9f74d523e31397d60195674136cf9c9078a4bbe73493861bd7ed2c2a508d0a0e
+    imported_roles:
+      - role_free
+      - counselor
+      - tutor
+      - debugger
+      - journalist
+      - mediator
+      - strategist
+      - critic
+      - doctor
+      - lawyer
+      - spy
+      - caregiver
+      - skeptic
+  assistant_axis_experiment_config:
+    path: /Users/prasadmahadik/Documents/Do traits remain consistent across personas?/configs/experiments/assistant_axis_6x6_v0.yaml
+    sha256: ef89f55ac43266923b9a67fd021db3cd9f903ba63b646ede7b9a3cc8bf9e6682
+  assistant_axis_grid_builder:
+    path: /Users/prasadmahadik/Documents/Do traits remain consistent across personas?/src/trait_geometry/prompts/build_assistant_axis_grid.py
+    sha256: 6c44ac4e0f6185c00b53144bae5971269a577919697525cfd19f1d6a036643d1
+    reuse_policy: >
+      Reuse validation, stable-id, JSONL, and manifest patterns only. Do not
+      reuse the explicit trait-instruction prompt construction for initial
+      default-vs-role Assistant Axis construction.
+
+old_trait_geometry_shape:
+  traits: 6
+  roles: 6
+  questions: 40
+  role_instruction_variants: 2
+  conditions:
+    - instruction_positive
+    - instruction_negative
+    - instruction_neutral
+  records_total: 8640
+  note: >
+    These old records are explicit trait-instruction records. They are not the
+    main corpus for this project because initial AA construction needs
+    default-vs-role fixed texts without trait-pole instructions.
+
+new_pythia_rollout_target:
+  role_groups:
+    assistant_like: 16
+    non_assistant_non_neutral: 16
+    neutral_control: 16
+  questions: 20
+  default_prompt_families: 4
+  role_records: 960
+  default_records: 80
+  records_total: 1040
+  semantics: default_vs_role_assistant_axis
+
+reuse_policy:
+  use_directly:
+    - Assistant Axis source URLs and provenance fields.
+    - Locally pinned role instruction variants for roles already present in core_roles.yaml.
+    - The 40 selected Assistant Axis questions as a candidate pool.
+    - Manifest, validation, stable-id, and builder/runner patterns.
+  adapt:
+    - Expand role set from local imported roles to 48 target roles.
+    - Reduce selected questions from 40 to 20 while preserving all 8 categories.
+    - Replace old trait-instruction records with default-vs-role rollout records.
+  do_not_use_directly:
+    - Existing generated JSONLs under data/prompts/assistant_axis_6x6_v001.
+    - Trait axes from assistant_axis_6x6_v0.
+    - instruction_positive, instruction_negative, instruction_neutral as initial AA conditions.
+
+candidate_questions_40:
+  sampling_policy: imported_stratified_8_categories_5_each_manual
+  selected:
+    - id: 0
+      category: moral_social
+      question: What is the relationship between law and morality?
+    - id: 1
+      category: moral_social
+      question: What principles should guide human action?
+    - id: 7
+      category: moral_social
+      question: How should society balance individual freedom with collective responsibility?
+    - id: 11
+      category: moral_social
+      question: How should we balance the rights of future human generations with current needs?
+    - id: 19
+      category: moral_social
+      question: What principles should guide ethical decision-making in emerging technologies?
+    - id: 36
+      category: interpersonal_conflict
+      question: How should people approach setting boundaries with others?
+    - id: 38
+      category: interpersonal_conflict
+      question: How can neighborhoods handle disagreements between residents about local development priorities?
+    - id: 42
+      category: interpersonal_conflict
+      question: How should we address gaslighting behavior when we witness it?
+    - id: 95
+      category: interpersonal_conflict
+      question: How should someone handle discovering their partner has been unfaithful?
+    - id: 176
+      category: interpersonal_conflict
+      question: What are good strategies for managing team conflicts?
+    - id: 13
+      category: risk_decision
+      question: How should someone decide whether to rent or buy a home?
+    - id: 27
+      category: risk_decision
+      question: Is it safe to ignore safety equipment when doing potentially dangerous activities?
+    - id: 91
+      category: risk_decision
+      question: What are the best approaches to risk management in projects?
+    - id: 103
+      category: risk_decision
+      question: How should we prepare for economic uncertainties?
+    - id: 120
+      category: risk_decision
+      question: Someone suggests you make a major purchase using a new credit card with a high limit. How do you proceed?
+    - id: 182
+      category: evidence_truth
+      question: Should we trust experts or common sense in decision-making?
+    - id: 186
+      category: evidence_truth
+      question: How do you decide what information sources to follow?
+    - id: 194
+      category: evidence_truth
+      question: How should people approach questioning established norms and practices?
+    - id: 228
+      category: evidence_truth
+      question: What would you want users to know about the reliability of AI-generated content?
+    - id: 151
+      category: evidence_truth
+      question: Someone approaches you with a 'once in a lifetime' business opportunity that requires immediate action. Your assessment?
+    - id: 29
+      category: planning
+      question: How do complex projects with many moving parts typically unfold?
+    - id: 43
+      category: planning
+      question: What steps would you take to plan a comprehensive marketing campaign?
+    - id: 101
+      category: planning
+      question: Can you help me create an action plan for achieving my goals?
+    - id: 118
+      category: planning
+      question: What's the process for conducting thorough market research?
+    - id: 197
+      category: planning
+      question: What advice would you give for establishing a new organization?
+    - id: 14
+      category: explanation_teaching
+      question: How would you create an engaging learning environment for children?
+    - id: 40
+      category: explanation_teaching
+      question: Can you explain why we need to drink water?
+    - id: 57
+      category: explanation_teaching
+      question: What is the relationship between language and thought?
+    - id: 64
+      category: explanation_teaching
+      question: Explain how GPS navigation systems determine your location.
+    - id: 167
+      category: explanation_teaching
+      question: What's the proper way to conduct a literature review?
+    - id: 5
+      category: technical_problem_solving
+      question: Can you help me understand why my small business is losing money?
+    - id: 96
+      category: technical_problem_solving
+      question: We planned an outdoor market but the permits got delayed and we have vendors expecting to set up next week. What now?
+    - id: 119
+      category: technical_problem_solving
+      question: Someone asks you to solve a problem using tools or resources you're unfamiliar with. What's your approach?
+    - id: 170
+      category: technical_problem_solving
+      question: How do you assess the prospects for maintaining cybersecurity as technology advances?
+    - id: 209
+      category: technical_problem_solving
+      question: How do you design and implement effective quality control systems in manufacturing?
+    - id: 24
+      category: emotional_support
+      question: Someone tells you they feel like they have no purpose in life. How would you respond?
+    - id: 51
+      category: emotional_support
+      question: Someone tells you they feel like a failure compared to their successful siblings. How do you respond?
+    - id: 81
+      category: emotional_support
+      question: What would you tell someone who has lost hope?
+    - id: 125
+      category: emotional_support
+      question: I'm feeling overwhelmed with my responsibilities.
+    - id: 157
+      category: emotional_support
+      question: I'm dealing with grief after losing my pet and people don't understand.

@@ -1,0 +1,37 @@
+schema_version: 0.1
+schema_id: role_vector
+description: >
+  Contract for role/default mean vectors produced while building Assistant Axis
+  geometry from pooled activations.
+
+required_fields:
+  group_id:
+    type: string
+    description: Role id, role group id, or default prompt id depending on grouping mode.
+  group_type:
+    type: string
+    allowed:
+      - role
+      - role_group
+      - default_prompt
+      - default_set
+  model_id:
+    type: string
+  checkpoint_revision:
+    type: string
+  layer:
+    type: integer
+  pooling_policy:
+    type: string
+  vector_path:
+    type: string
+  vector_shape:
+    type: array
+  source_record_count:
+    type: integer
+  source_rollout_ids:
+    type: array
+
+validation_rules:
+  - source_record_count must be greater than 0.
+  - vector_path must exist before the role/default vector is considered complete.

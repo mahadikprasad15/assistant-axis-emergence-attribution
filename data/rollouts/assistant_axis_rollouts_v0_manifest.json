@@ -1,0 +1,99 @@
+{
+  "actual_counts": {
+    "default_prompt_id": {
+      "bare_question": 20,
+      "helpful_assistant": 20,
+      "large_language_model": 20,
+      "respond_as_yourself": 20
+    },
+    "default_records": 80,
+    "question_categories": {
+      "emotional_support": 156,
+      "evidence_truth": 156,
+      "explanation_teaching": 156,
+      "interpersonal_conflict": 104,
+      "moral_social": 104,
+      "planning": 104,
+      "risk_decision": 104,
+      "technical_problem_solving": 156
+    },
+    "records_total": 1040,
+    "role_groups": {
+      "assistant_like": 320,
+      "neutral_control": 320,
+      "non_assistant_non_neutral": 320
+    },
+    "role_records": 960,
+    "role_source_status": {
+      "imported_local_core_roles": 120,
+      "planned_upstream_import": 840
+    }
+  },
+  "builder": "RolloutCorpusBuilder",
+  "created_at_utc": "2026-06-24T11:49:31.216380+00:00",
+  "output_jsonl": "data/rollouts/assistant_axis_rollouts_v0.jsonl",
+  "output_jsonl_sha256": "72ec4b84695d50ab9ecacd9b8031fecf03a703af5a1227c2ab33bfe6794314ce",
+  "rollout_config": {
+    "path": "configs/rollouts/assistant_axis_roles_v0.yaml",
+    "sha256": "c788fd433b68d7e31a045ea62e57f4ce26c57f2243e958fa71f449f779db02fd"
+  },
+  "schema_version": "0.1",
+  "source_material_config": {
+    "path": "configs/rollouts/assistant_axis_source_material_v0.yaml",
+    "sha256": "be000b7ace71cafe6b8ac68009a234a3f8631e547b7b863bfed8b6646ef7f36c"
+  },
+  "target_counts": {
+    "default_records": 80,
+    "records_total": 1040,
+    "role_records": 960
+  },
+  "validation": {
+    "errors": [],
+    "passed": true,
+    "warnings": [
+      "role 'assistant' uses a planned_upstream_import placeholder instruction",
+      "role 'teacher' uses a planned_upstream_import placeholder instruction",
+      "role 'consultant' uses a planned_upstream_import placeholder instruction",
+      "role 'analyst' uses a planned_upstream_import placeholder instruction",
+      "role 'reviewer' uses a planned_upstream_import placeholder instruction",
+      "role 'evaluator' uses a planned_upstream_import placeholder instruction",
+      "role 'technical_support_agent' uses a planned_upstream_import placeholder instruction",
+      "role 'documentation_writer' uses a planned_upstream_import placeholder instruction",
+      "role 'coach' uses a planned_upstream_import placeholder instruction",
+      "role 'moderator' uses a planned_upstream_import placeholder instruction",
+      "role 'editor' uses a planned_upstream_import placeholder instruction",
+      "role 'researcher' uses a planned_upstream_import placeholder instruction",
+      "role 'interpreter' uses a planned_upstream_import placeholder instruction",
+      "role 'planner' uses a planned_upstream_import placeholder instruction",
+      "role 'mystic' uses a planned_upstream_import placeholder instruction",
+      "role 'trickster' uses a planned_upstream_import placeholder instruction",
+      "role 'pirate' uses a planned_upstream_import placeholder instruction",
+      "role 'oracle' uses a planned_upstream_import placeholder instruction",
+      "role 'actor' uses a planned_upstream_import placeholder instruction",
+      "role 'zealot' uses a planned_upstream_import placeholder instruction",
+      "role 'villain' uses a planned_upstream_import placeholder instruction",
+      "role 'manipulator' uses a planned_upstream_import placeholder instruction",
+      "role 'propagandist' uses a planned_upstream_import placeholder instruction",
+      "role 'scammer' uses a planned_upstream_import placeholder instruction",
+      "role 'conspiracist' uses a planned_upstream_import placeholder instruction",
+      "role 'authoritarian' uses a planned_upstream_import placeholder instruction",
+      "role 'demagogue' uses a planned_upstream_import placeholder instruction",
+      "role 'saboteur' uses a planned_upstream_import placeholder instruction",
+      "role 'narcissist' uses a planned_upstream_import placeholder instruction",
+      "role 'opportunist' uses a planned_upstream_import placeholder instruction",
+      "role 'historian' uses a planned_upstream_import placeholder instruction",
+      "role 'scientist' uses a planned_upstream_import placeholder instruction",
+      "role 'novelist' uses a planned_upstream_import placeholder instruction",
+      "role 'bureaucrat' uses a planned_upstream_import placeholder instruction",
+      "role 'friend' uses a planned_upstream_import placeholder instruction",
+      "role 'narrator' uses a planned_upstream_import placeholder instruction",
+      "role 'encyclopedia' uses a planned_upstream_import placeholder instruction",
+      "role 'storyteller' uses a planned_upstream_import placeholder instruction",
+      "role 'engineer' uses a planned_upstream_import placeholder instruction",
+      "role 'economist' uses a planned_upstream_import placeholder instruction",
+      "role 'philosopher' uses a planned_upstream_import placeholder instruction",
+      "role 'comedian' uses a planned_upstream_import placeholder instruction",
+      "840 role records use planned_upstream_import role instructions"
+    ]
+  }
+}

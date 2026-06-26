@@ -1,0 +1,54 @@
+schema_version: 0.1
+schema_id: generated_response_manifest
+description: >
+  Manifest contract for a validated fixed-response JSONL artifact.
+
+required_fields:
+  schema_version:
+    type: string
+  importer:
+    type: string
+    expected: FixedResponseImporter
+  created_at_utc:
+    type: string
+  rollout_jsonl:
+    type: object
+    required_keys:
+      - path
+      - sha256
+  input_responses_jsonl:
+    type: object
+    required_keys:
+      - path
+      - sha256
+  output_responses_jsonl:
+    type: object
+    required_keys:
+      - path
+      - sha256
+  counts:
+    type: object
+    required_keys:
+      - rollout_records
+      - input_response_records
+      - output_response_records
+      - empty_responses
+      - missing_rollout_ids
+      - duplicate_response_ids
+  validation:
+    type: object
+    required_keys:
+      - passed
+      - errors
+      - warnings
+
+validation_rules:
+  - Main full-corpus imports must cover every rollout id.
+  - Fixture imports may cover a subset when mode is fixture.
+  - Empty generated responses are always errors.
+  - Duplicate response rollout_ids are errors.
+  - Prompt mismatches are errors unless explicitly relaxed.
+
+notes:
+  - This is a validation/import manifest, not a model generation run manifest.
+  - A generator runner should produce its own run manifest before this importer normalizes the output.

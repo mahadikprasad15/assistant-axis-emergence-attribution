@@ -1,0 +1,86 @@
+{
+  "schema_version": "0.1",
+  "manifest_type": "vast_mvp_upload_manifest",
+  "run_label": "pythia_410m_step143000_layer12_full_v0",
+  "created_utc": "TODO",
+  "vast_instance": {
+    "provider": "vast.ai",
+    "gpu": "A5000",
+    "machine_id": "TODO",
+    "notes": "TODO"
+  },
+  "repo": {
+    "name": "Assistant Axis Emergence and Attribution",
+    "commit": "TODO",
+    "dirty_worktree": "TODO",
+    "root_on_vast": "TODO"
+  },
+  "fixed_inputs": {
+    "rollout_config": "configs/rollouts/assistant_axis_roles_v0.yaml",
+    "experiment_config": "configs/experiments/pythia_410m_mvp_v0.yaml",
+    "rollout_jsonl": "data/rollouts/assistant_axis_rollouts_v0.jsonl",
+    "rollout_manifest": "data/rollouts/assistant_axis_rollouts_v0_manifest.json",
+    "expected_records": 1040,
+    "expected_role_records": 960,
+    "expected_default_records": 80
+  },
+  "models": {
+    "response_generator": "meta-llama/Llama-3.2-1B-Instruct",
+    "activation_model": "EleutherAI/pythia-410m-deduped",
+    "activation_revision": "step143000",
+    "activation_layer": 12,
+    "pooling": "response_token_mean"
+  },
+  "artifacts_to_preserve": [
+    {
+      "kind": "validated_fixed_responses",
+      "path": "data/rollouts/assistant_axis_rollouts_v0_responses.jsonl",
+      "required": true
+    },
+    {
+      "kind": "validated_fixed_response_manifest",
+      "path": "data/rollouts/assistant_axis_rollouts_v0_responses_manifest.json",
+      "required": true
+    },
+    {
+      "kind": "fixed_response_generation_run",
+      "path": "artifacts/runs/assistant_axis_attribution/fixed-response-generator/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/llama-3.2-1b-instruct/llama-3.2-1b-full-v0",
+      "required": true
+    },
+    {
+      "kind": "activation_run",
+      "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/response-token-mean-layer12/activation-step143000-layer12-full-v0",
+      "required": true
+    },
+    {
+      "kind": "assistant_axis_run",
+      "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/aa-main-layer12/aa-main-step143000-layer12-full-v0",
+      "required": true
+    },
+    {
+      "kind": "role_geometry_run",
+      "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/role-geometry-layer12/role-geometry-step143000-layer12-full-v0",
+      "required": true
+    },
+    {
+      "kind": "geometry_report_run",
+      "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/geometry-report-layer12/geometry-report-step143000-layer12-full-v0",
+      "required": true
+    }
+  ],
+  "artifacts_not_to_upload_by_default": [
+    ".cache/huggingface",
+    ".venv",
+    "__pycache__"
+  ],
+  "upload_targets": {
+    "huggingface_repo": "TODO",
+    "local_backup_path": "TODO"
+  },
+  "completion": {
+    "fixed_response_import_passed": "TODO",
+    "activation_inspection_passed": "TODO",
+    "geometry_report_gate": "TODO",
+    "ready_for_checkpoint_sweep": "TODO"
+  }
+}

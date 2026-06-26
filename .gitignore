@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Generated experiment outputs.
+artifacts/runs/
+
+# Large model/data caches should stay outside git.
+.cache/
+
+# Local scratch artifacts accidentally created while inspecting schemas.
+configs/schemas/Untitled-*.ipynb
+configs/schemas/artifacts/

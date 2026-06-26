@@ -1,0 +1,47 @@
+schema_version: 0.1
+schema_id: generated_response_record
+description: >
+  Contract for one fixed generated response attached to a rollout prompt. These
+  records are the bridge between prompt-only rollout stimuli and
+  response-token activation pooling.
+
+required_fields:
+  rollout_id:
+    type: string
+    description: Must match a rollout_id in data/rollouts/assistant_axis_rollouts_v0.jsonl.
+  prompt_text:
+    type: string
+    description: Prompt text copied from the rollout record or validated against it.
+  generated_response:
+    type: string
+    description: Frozen generated response text used for response-token activation pooling.
+  response_source:
+    type: object
+    required_keys:
+      - mode
+      - model
+    description: How this response was produced.
+
+recommended_fields:
+  response_id:
+    type: string
+    description: Stable id for this response record.
+  response_char_count:
+    type: integer
+  response_word_count:
+    type: integer
+  generation_config:
+    type: object
+  validation_tags:
+    type: array
+
+validation_rules:
+  - rollout_id must exist in the rollout corpus.
+  - rollout_id values must be unique in a response file.
+  - prompt_text must match the rollout corpus prompt_text unless the importer is run with explicit relaxed matching.
+  - generated_response must contain non-whitespace text.
+  - empty responses are forbidden for response_token_mean.
+
+notes:
+  - This schema does not require token counts because tokenization is model-specific.
+  - The activation runner will later compute prompt and response token spans with the Pythia tokenizer.

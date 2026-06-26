@@ -1,0 +1,57 @@
+schema_version: 0.1
+schema_id: assistant_axis_vector
+description: >
+  Contract for one Assistant Axis vector artifact built from pooled rollout
+  activations at a single checkpoint and layer.
+
+required_fields:
+  axis_id:
+    type: string
+    description: Stable id for the axis variant/checkpoint/layer/pooling policy.
+  variant_id:
+    type: string
+    examples:
+      - aa_main
+      - aa_all_defaults_sensitivity
+      - aa_all_roles_sensitivity
+  model_id:
+    type: string
+    expected: EleutherAI/pythia-410m-deduped
+  checkpoint_revision:
+    type: string
+    examples:
+      - step143000
+  layer:
+    type: integer
+  pooling_policy:
+    type: string
+    expected: response_token_mean
+  vector_path:
+    type: string
+    description: Path to serialized unit-normalized tensor.
+  vector_shape:
+    type: array
+    expected_for_pythia_410m:
+      - 1024
+  default_prompt_ids:
+    type: array
+  contrast_role_groups:
+    type: array
+  counts:
+    type: object
+    required_keys:
+      - default_records
+      - contrast_records
+  norm:
+    type: number
+    description: Norm before unit normalization.
+  source:
+    type: object
+    description: Input activation run and experiment config provenance.
+
+validation_rules:
+  - default_records must be greater than 0.
+  - contrast_records must be greater than 0.
+  - norm must be positive before normalization.
+  - vector_shape must match model hidden size.
+  - vector_path must exist before the axis is considered complete.

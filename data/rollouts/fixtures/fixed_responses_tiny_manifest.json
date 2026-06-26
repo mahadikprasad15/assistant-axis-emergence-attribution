@@ -1,0 +1,33 @@
+{
+  "counts": {
+    "duplicate_response_ids": 0,
+    "empty_responses": 0,
+    "input_response_records": 4,
+    "missing_rollout_ids": 0,
+    "output_response_records": 4,
+    "rollout_records": 1040
+  },
+  "created_at_utc": "2026-06-24T14:03:11.398411+00:00",
+  "importer": "FixedResponseImporter",
+  "input_responses_jsonl": {
+    "path": "data/rollouts/fixtures/fixed_responses_tiny.jsonl",
+    "sha256": "ee337321121c47e03137e82c945ed100e5a60cb8d0ef7a25d89cd1a6526b7742"
+  },
+  "mode": "fixture",
+  "output_responses_jsonl": {
+    "path": "data/rollouts/fixtures/fixed_responses_tiny_validated.jsonl",
+    "sha256": "2ea28fb40772cbfbb3ad5d5d395a3336175a18b184efdfc5f58c530e9f9d2d06"
+  },
+  "rollout_jsonl": {
+    "path": "data/rollouts/assistant_axis_rollouts_v0.jsonl",
+    "sha256": "72ec4b84695d50ab9ecacd9b8031fecf03a703af5a1227c2ab33bfe6794314ce"
+  },
+  "schema_version": "0.1",
+  "validation": {
+    "errors": [],
+    "passed": true,
+    "warnings": [
+      "fixture/subset import: not all rollout_ids are covered"
+    ]
+  }
+}

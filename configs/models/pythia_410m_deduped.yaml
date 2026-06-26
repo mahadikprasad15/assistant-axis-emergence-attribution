@@ -1,0 +1,76 @@
+schema_version: 0.1
+model_config_id: pythia_410m_deduped
+
+model:
+  repo_id: EleutherAI/pythia-410m-deduped
+  tokenizer_repo_id: EleutherAI/pythia-410m-deduped
+  architecture: GPTNeoXForCausalLM
+  tokenizer_family: GPT-NeoX-20B-compatible
+  license: apache-2.0
+  source_url: https://huggingface.co/EleutherAI/pythia-410m-deduped
+
+verified_model_card_facts:
+  parameter_class: 410M
+  non_embedding_params: 302311424
+  total_params: 405334016
+  layers: 24
+  hidden_size: 1024
+  attention_heads: 16
+  batch_size_tokens: 2097152
+  trained_tokens: 299892736000
+  dataset: EleutherAI/the_pile_deduplicated
+  note: >
+    Pythia-410M and Pythia-410M-deduped share the same architecture. The model
+    card table lists 24 layers, model dim 1024, and 16 heads for the 410M size.
+
+checkpoint_revisions:
+  revision_format: step{step}
+  final_revision: step143000
+  main_equals_final_revision: true
+  early_checkpoints:
+    - step0
+    - step1
+    - step2
+    - step4
+    - step8
+    - step16
+    - step32
+    - step64
+    - step128
+    - step256
+    - step512
+  every_1000_steps:
+    start: step1000
+    end: step143000
+    interval: 1000
+
+runtime_defaults:
+  framework: transformers
+  torch_dtype: auto
+  device: auto
+  local_files_only: false
+  trust_remote_code: false
+  cache_policy:
+    use_hf_cache: true
+    explicit_cache_dir: null
+
+activation_hooks:
+  backend: transformers_hooks
+  residual_stream_name: gpt_neox.layers.{layer}.output
+  layer_index_base: zero
+  layer_min: 0
+  layer_max: 23
+  first_layer_policy:
+    mode: explicit
+    layer: 12
+    rationale: >
+      First MVP readout uses the middle residual layer for a 24-layer model.
+      With zero-indexed layers 0..23, layer 12 is the first layer after the
+      halfway point. Later sweeps can compare nearby layers 11 and 12.
+
+generation_notes:
+  model_is_not_instruction_tuned: true
+  warning: >
+    This model is a base pretraining model, not a chat or RLHF assistant. Fixed
+    rollout responses should be generated once by a separate strong model or
+    otherwise provided as frozen text before response-token activation pooling.
