@@ -343,6 +343,37 @@ Plot report:
 cat artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-plots-layer12/coarse8-full-v0/results/plot_report.md
 ```
 
+## Early Dense 0-1000 Sweep
+
+The coarse trajectory shows the largest unresolved transition between
+`step0 -> step1000`. To localize it, run the dense early checkpoint sweep:
+
+```bash
+.venv/bin/python scripts/analysis/run_checkpoint_sweep.py \
+  --experiment-config configs/experiments/pythia_410m_early_dense_0_1000_v0.yaml \
+  --response-jsonl data/rollouts/assistant_axis_rollouts_v0_responses.jsonl \
+  --hf-cache-dir .cache/huggingface \
+  --activation-batch-size 8 \
+  --sweep-run-id early-dense-0-1000-full-v0
+```
+
+Then analyze the dense trajectory using `step1000` as the local endpoint:
+
+```bash
+.venv/bin/python scripts/analysis/analyze_axis_trajectory.py \
+  --sweep-summary artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/checkpoint-sweep-layer12/early-dense-0-1000-full-v0/results/checkpoint_sweep_summary.json \
+  --final-revision step1000 \
+  --run-id early-dense-0-1000-full-v0
+```
+
+Create the dense plot pack:
+
+```bash
+.venv/bin/python scripts/reporting/plot_axis_trajectory.py \
+  --trajectory-run-dir artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/early-dense-0-1000-full-v0 \
+  --run-id early-dense-0-1000-full-v0
+```
+
 ## Upload Artifacts To Hugging Face
 
 Use `HF_TOKEN`; do not use `huggingface-cli login` on VAST.

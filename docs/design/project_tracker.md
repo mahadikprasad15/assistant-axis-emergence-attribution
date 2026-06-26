@@ -107,7 +107,8 @@ The detailed task queue lives in `docs/design/tasklist.md`; update it together w
 | --- | --- | --- |
 | First layer | Middle residual layer | Smallest useful MVP before layer sweep. |
 | Pooling | Response-token mean | Avoids role-instruction contamination. |
-| Coarse checkpoints | 8 checkpoints | First pass uses `step0`, `step1000`, `step5000`, `step10000`, `step20000`, `step40000`, `step80000`, and `step143000`; densify only after geometry changes justify it. |
+| Coarse checkpoints | 8 checkpoints | First pass uses `step0`, `step1000`, `step5000`, `step10000`, `step20000`, `step40000`, `step80000`, and `step143000`. |
+| Early dense checkpoints | 12 checkpoints | Follow-up sweep localizes the large `step0 -> step1000` transition with `step0`, `step1`, `step2`, `step4`, `step8`, `step16`, `step32`, `step64`, `step128`, `step256`, `step512`, and `step1000`. |
 | First attribution sample | 1,000 sequences/window | Debug before 10k+ runs. |
 | Raw-source mapping | Deferred | Packed-sequence attribution is the honest first unit. |
 | Role count | 48 | Need enough role-space structure for PC1 and contrast; split into 16 assistant-like, 16 non-assistant/non-neutral, 16 neutral/control. |

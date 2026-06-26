@@ -1,0 +1,102 @@
+schema_version: 0.1
+experiment_id: pythia_410m_early_dense_0_1000_v0
+description: >
+  Dense early-checkpoint sweep for localizing the large geometry transition
+  observed between step0 and step1000 in the coarse Pythia-410M-deduped MVP
+  sweep.
+
+model_config: configs/models/pythia_410m_deduped.yaml
+rollout_config: configs/rollouts/assistant_axis_roles_v0.yaml
+rollout_jsonl: data/rollouts/assistant_axis_rollouts_v0.jsonl
+rollout_manifest: data/rollouts/assistant_axis_rollouts_v0_manifest.json
+
+fixed_response_policy:
+  required_for_main_activation_runs: true
+  response_source: generated_once_external_model
+  generated_response_jsonl: data/rollouts/assistant_axis_rollouts_v0_responses.jsonl
+  generated_response_manifest: data/rollouts/assistant_axis_rollouts_v0_responses_manifest.json
+  note: >
+    Reuse the same fixed role-faithful Llama responses as the coarse sweep so
+    checkpoint differences are from Pythia activations, not response changes.
+
+checkpoint_sweep:
+  first_pass_name: early_dense_0_1000
+  checkpoints:
+    - revision: step0
+      step: 0
+      reason: initialization baseline
+    - revision: step1
+      step: 1
+      reason: earliest available trained checkpoint
+    - revision: step2
+      step: 2
+      reason: earliest available trained checkpoint
+    - revision: step4
+      step: 4
+      reason: early log-spaced checkpoint
+    - revision: step8
+      step: 8
+      reason: early log-spaced checkpoint
+    - revision: step16
+      step: 16
+      reason: early log-spaced checkpoint
+    - revision: step32
+      step: 32
+      reason: early log-spaced checkpoint
+    - revision: step64
+      step: 64
+      reason: early log-spaced checkpoint
+    - revision: step128
+      step: 128
+      reason: early log-spaced checkpoint
+    - revision: step256
+      step: 256
+      reason: early log-spaced checkpoint
+    - revision: step512
+      step: 512
+      reason: last sub-1000 early checkpoint
+    - revision: step1000
+      step: 1000
+      reason: coarse-sweep early learned structure endpoint
+  densify_policy:
+    trigger: >
+      This sweep is already the available early Pythia checkpoint granularity
+      between initialization and step1000.
+
+activation_extraction:
+  layer_policy:
+    mode: explicit
+    layers:
+      - 12
+    layer_index_base: zero
+    rationale: match the coarse MVP middle residual layer.
+  pooling_policy:
+    primary: response_token_mean
+    debug_fallback: full_text_mean
+    debug_fallback_allowed_for_main_results: false
+    rationale: >
+      Match the coarse MVP pooling policy and avoid pooling over the role/default
+      instruction prefix.
+  batch_size:
+    activation_records: 8
+    note: tune based on local/GPU memory.
+
+axis_construction_variants:
+  - variant_id: aa_main
+    default_prompt_ids:
+      - helpful_assistant
+      - large_language_model
+    contrast_role_groups:
+      - non_assistant_non_neutral
+    diagnostic_role_groups:
+      - assistant_like
+      - neutral_control
+    rationale: Match the coarse MVP main Assistant Axis.
+
+artifact_layout:
+  output_root: artifacts/runs
+  experiment_name: assistant_axis_attribution
+  model_name: pythia-410m-deduped
+  dataset_name: fixed-aa-rollouts-v0
+  probe_set: assistant-axis-rollouts-v0
+  variant: response-token-mean-layer12-early-dense-0-1000

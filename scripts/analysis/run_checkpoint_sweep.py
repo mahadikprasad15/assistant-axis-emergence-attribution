@@ -382,8 +382,12 @@ def main() -> int:
             )
             write_json(summary_path, {"schema_version": "0.1", "checkpoints": completed})
 
-        final_state = "completed"
-        final_message = "checkpoint sweep completed"
+        if args.dry_run:
+            final_state = "dry_run"
+            final_message = "checkpoint sweep dry run completed; no stage commands were executed"
+        else:
+            final_state = "completed"
+            final_message = "checkpoint sweep completed"
     except Exception as exc:
         final_state = "failed"
         final_message = f"checkpoint sweep failed: {type(exc).__name__}: {exc}"
