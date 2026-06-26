@@ -97,6 +97,8 @@ The result JSONL is treated as the source of truth for completed units. Progress
 
 For `hf_local`, generation is batched with `--batch-size`. On A5000, start with `--batch-size 20`; reduce it if CUDA memory is tight.
 
+The runner displays a `tqdm` progress bar by default. Use `--no-progress` only for log-only environments where terminal progress rendering is undesirable.
+
 ## Helper Function Map
 
 ```mermaid
@@ -118,6 +120,7 @@ flowchart TD
 - The template provider should be used with `--limit` for smoke tests.
 - `hf_local` records model id and generation settings in each response record.
 - `hf_local` should use batched generation for full runs.
+- The runner should show `tqdm` progress during full generation.
 - Full scientific response generation remains pending until `hf_local` is run over all 1040 rollout records and the output is imported with `--mode full`.
 
 ## Llama Command

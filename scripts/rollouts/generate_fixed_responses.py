@@ -11,6 +11,22 @@ from pathlib import Path
 from typing import Any, Callable
 
 
+def make_progress_bar(total: int, initial: int, enabled: bool) -> Any:
+    if not enabled:
+        return None
+    try:
+        from tqdm.auto import tqdm
+    except ImportError:
+        return None
+    return tqdm(
+        total=total,
+        initial=initial,
+        desc="fixed responses",
+        unit="record",
+        dynamic_ncols=True,
+    )
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -427,6 +443,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--sample-mode", choices=["first", "stratified"], default="first")
     parser.add_argument("--save-every", type=int, default=25)
+    parser.add_argument("--no-progress", action="store_true")
     parser.add_argument("--force-completed", action="store_true")
     return parser
 
@@ -478,6 +495,11 @@ def main() -> int:
     write_json(inputs_dir / "selected_rollout_ids.json", {"rollout_ids": selected_ids})
 
     cursor = 0
+    progress_bar = make_progress_bar(
+        total=len(selected_ids),
+        initial=len(completed_ids),
+        enabled=not args.no_progress,
+    )
     try:
         generator = load_hf_local_generator(args) if args.provider == "hf_local" else None
         pending_batch: list[dict[str, Any]] = []
@@ -499,6 +521,15 @@ def main() -> int:
                 response_record = build_response_record(rollout, args, raw_response)
                 append_jsonl(result_jsonl, response_record)
                 completed_ids.add(str(rollout["rollout_id"]))
+            if progress_bar is not None:
+                progress_bar.update(len(batch))
+                progress_bar.set_postfix(
+                    {
+                        "batch": len(batch),
+                        "done": len(completed_ids),
+                    },
+                    refresh=True,
+                )
             if len(completed_ids) % args.save_every < len(batch):
                 write_progress(progress_path, selected_ids, completed_ids, batch_cursor)
                 append_log(log_path, "progress", {"cursor": batch_cursor, "completed": len(completed_ids)})
@@ -520,6 +551,9 @@ def main() -> int:
         final_state = "failed"
         final_message = f"fixed response generation failed: {type(exc).__name__}: {exc}"
         append_log(log_path, "error", {"error_type": type(exc).__name__, "message": str(exc)})
+    finally:
+        if progress_bar is not None:
+            progress_bar.close()
 
     write_progress(progress_path, selected_ids, completed_ids, cursor)
     write_status(

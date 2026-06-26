@@ -74,6 +74,7 @@ Check runtime libraries before model work.
 ## Step 1: Generate Fixed Responses
 
 Primary run: Llama 3.2 1B Instruct.
+This shows a `tqdm` progress bar by default.
 
 ```bash
 .venv/bin/python scripts/rollouts/generate_fixed_responses.py \
