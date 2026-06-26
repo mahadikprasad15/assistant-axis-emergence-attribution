@@ -59,6 +59,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Role geometry builder | Implemented, waiting on activations | `scripts/analysis/build_role_geometry.py` builds role/default mean vectors, PC1, loadings CSV, and geometry summary from activation + AA runs. |
 | Geometry sanity report | Implemented, waiting on geometry artifacts | `scripts/reporting/report_geometry.py` reads AA and role-geometry runs and writes `geometry_report.md`, `geometry_metrics.json`, and a proceed/caution/stop gate. |
 | Checkpoint sweep | Runner implemented, ready to run | `scripts/analysis/run_checkpoint_sweep.py` orchestrates activation, inspection, AA, role geometry, and report over the config's coarse 8 checkpoints. Run after the final-checkpoint geometry report is defensible. |
+| Axis trajectory analyzer | Implemented, waiting on sweep artifacts | `scripts/analysis/analyze_axis_trajectory.py` computes cosine-to-final, adjacent cosine, AA-PC1, PC1 EVR, loading correlations, moving roles, and candidate transition windows. |
 | Steering tests | Not started | Need hook implementation and prompt set. |
 | Gradient attribution | Not started | Need Parquet loader, sampler, gradient scorer, and resumable run state. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
@@ -197,7 +198,7 @@ Every run must include:
 
 | Component | Status | Planned Script | Purpose |
 | --- | --- | --- | --- |
-| `TrajectoryAnalyzer` | todo | `scripts/analysis/analyze_axis_trajectory.py` | Find stabilization or transition windows. |
+| `TrajectoryAnalyzer` | done, waiting on sweep artifacts | `scripts/analysis/analyze_axis_trajectory.py` | Find stabilization or transition windows. |
 | `ActivationRunInspector` | done | `scripts/activations/inspect_activation_run.py` | Inspect activation run status, progress, index rows, tensor files, spans, and shapes. |
 | `TrainingWindowPlanner` | todo | `scripts/data/plan_training_window.py` | Map checkpoint intervals to Parquet files and batch ranges. |
 | `AttributionSummaryAnalyzer` | todo | `scripts/reporting/summarize_attribution.py` | Produce top/bottom tables and aggregate summaries. |

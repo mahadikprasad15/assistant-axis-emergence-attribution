@@ -305,7 +305,7 @@ Analyzers compute metrics from existing artifacts.
 
 | Analyzer | Input | Output |
 | --- | --- | --- |
-| `TrajectoryAnalyzer` | per-checkpoint AA vectors and PC1s | cosine curves and transition windows |
+| `TrajectoryAnalyzer` | per-checkpoint AA vectors, PC1s, loadings, and reports | cosine-to-final, adjacent cosines, loading correlations, moving roles, and transition windows |
 | `RolloutInspector` | rollout JSONL and manifest | terminal counts and sample records |
 | `ActivationRunInspector` | activation run directory | status/progress/index/tensor/span summary |
 | `RoleLoadingAnalyzer` | role vectors and AA/PC1 | role loading tables |

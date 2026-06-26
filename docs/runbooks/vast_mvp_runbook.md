@@ -290,3 +290,29 @@ artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-
 ```
 
 If interrupted, rerun the same command. Completed stage outputs are detected from their run directories and skipped by the stage scripts.
+
+## Axis Trajectory Analysis
+
+After the sweep finishes, build the cross-checkpoint trajectory report:
+
+```bash
+.venv/bin/python scripts/analysis/analyze_axis_trajectory.py \
+  --sweep-summary artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/checkpoint-sweep-layer12/coarse8-full-v0/results/checkpoint_sweep_summary.json \
+  --final-revision step143000 \
+  --run-id coarse8-full-v0
+```
+
+This writes:
+
+```text
+artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/coarse8-full-v0/results/axis_trajectory.csv
+artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/coarse8-full-v0/results/checkpoint_transitions.csv
+artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/coarse8-full-v0/results/top_moving_roles.csv
+artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/coarse8-full-v0/results/trajectory_report.md
+```
+
+Print the report:
+
+```bash
+cat artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/coarse8-full-v0/results/trajectory_report.md
+```
