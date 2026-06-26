@@ -311,6 +311,7 @@ Analyzers compute metrics from existing artifacts.
 | `RoleLoadingAnalyzer` | role vectors and AA/PC1 | role loading tables |
 | `AttributionSummaryAnalyzer` | scored training sequences | top/bottom tables and aggregate summaries |
 | `GeometryReportBuilder` | AA summary plus role geometry summary/loadings | sanity report and proceed/caution/stop gate |
+| `AxisTrajectoryPlotter` | trajectory CSVs | cosine, geometry-quality, loading-correlation, transition-score, and moving-role plots |
 
 Analyzer rules:
 

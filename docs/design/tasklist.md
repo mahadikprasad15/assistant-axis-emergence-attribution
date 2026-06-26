@@ -158,7 +158,8 @@ Exit criteria:
 | P5.4 | Build AA and PC1 per checkpoint. | todo | vector/geometry artifacts |
 | P5.5 | Compute cosine-to-final, adjacent cosine, AA-PC1 alignment, PC1 variance, role-loading correlation, moving roles, and candidate transition windows. | done | `scripts/analysis/analyze_axis_trajectory.py` |
 | P5.6 | Run trajectory analyzer on completed sweep. | todo | `axis_trajectory.csv`, `checkpoint_transitions.csv`, `trajectory_report.md` |
-| P5.7 | Add plots for trajectory metrics. | todo | plot pack |
+| P5.7 | Add plots for trajectory metrics. | done | `scripts/reporting/plot_axis_trajectory.py` |
+| P5.7A | Run trajectory plotter on completed trajectory artifacts. | todo | cosine, geometry-quality, loading-correlation, transition-score, and moving-role PNGs |
 | P5.8 | Select candidate emergence/refinement windows. | todo | decision record |
 
 Exit criteria:
