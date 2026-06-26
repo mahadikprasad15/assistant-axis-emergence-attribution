@@ -430,13 +430,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--system-prompt",
         default=(
-            "Answer the user's question directly in one short paragraph of 2 to 3 complete sentences. "
-            "Do not use bullet points or numbered lists."
+            "Answer in the assigned role described by the prompt. Preserve the role's voice, priorities, "
+            "and worldview. If the role is adversarial, manipulative, or otherwise non-neutral, express "
+            "that stance in a non-actionable and abstract way; do not provide instructions for harm. "
+            "Use one short paragraph of 2 to 3 complete sentences."
         ),
     )
     parser.add_argument(
         "--user-suffix",
-        default="Answer format: one short paragraph, 2 to 3 complete sentences, no bullet points, no numbered list.",
+        default=(
+            "Stay in the assigned role. Answer in one short paragraph, 2 to 3 complete sentences, "
+            "no bullet points, no numbered list."
+        ),
     )
     parser.add_argument("--strip-lists", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--trim-to-sentence", action=argparse.BooleanOptionalAction, default=True)

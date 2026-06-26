@@ -75,13 +75,14 @@ Check runtime libraries before model work.
 
 Primary run: Llama 3.2 1B Instruct.
 This shows a `tqdm` progress bar by default.
+Use a fresh run id if a prior run produced role-washed responses.
 
 ```bash
 .venv/bin/python scripts/rollouts/generate_fixed_responses.py \
   --provider hf_local \
   --hf-model-id meta-llama/Llama-3.2-1B-Instruct \
-  --variant llama-3.2-1b-instruct \
-  --run-id llama-3.2-1b-full-v0 \
+  --variant llama-3.2-1b-instruct-rolefaithful \
+  --run-id llama-3.2-1b-rolefaithful-full-v0 \
   --hf-cache-dir .cache/huggingface \
   --max-new-tokens 192 \
   --batch-size 20 \
@@ -92,14 +93,14 @@ This shows a `tqdm` progress bar by default.
 Expected raw output:
 
 ```text
-artifacts/runs/assistant_axis_attribution/fixed-response-generator/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/llama-3.2-1b-instruct/llama-3.2-1b-full-v0/results/generated_responses_raw.jsonl
+artifacts/runs/assistant_axis_attribution/fixed-response-generator/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/llama-3.2-1b-instruct-rolefaithful/llama-3.2-1b-rolefaithful-full-v0/results/generated_responses_raw.jsonl
 ```
 
 Resume the same run if interrupted:
 
 ```bash
 .venv/bin/python scripts/rollouts/generate_fixed_responses.py \
-  --resume-run-dir artifacts/runs/assistant_axis_attribution/fixed-response-generator/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/llama-3.2-1b-instruct/llama-3.2-1b-full-v0 \
+  --resume-run-dir artifacts/runs/assistant_axis_attribution/fixed-response-generator/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/llama-3.2-1b-instruct-rolefaithful/llama-3.2-1b-rolefaithful-full-v0 \
   --provider hf_local \
   --hf-model-id meta-llama/Llama-3.2-1B-Instruct \
   --hf-cache-dir .cache/huggingface \
@@ -125,7 +126,7 @@ Fallback only if Llama access fails:
 
 ```bash
 .venv/bin/python scripts/rollouts/import_fixed_responses.py \
-  --input-jsonl artifacts/runs/assistant_axis_attribution/fixed-response-generator/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/llama-3.2-1b-instruct/llama-3.2-1b-full-v0/results/generated_responses_raw.jsonl \
+  --input-jsonl artifacts/runs/assistant_axis_attribution/fixed-response-generator/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/llama-3.2-1b-instruct-rolefaithful/llama-3.2-1b-rolefaithful-full-v0/results/generated_responses_raw.jsonl \
   --output-jsonl data/rollouts/assistant_axis_rollouts_v0_responses.jsonl \
   --output-manifest data/rollouts/assistant_axis_rollouts_v0_responses_manifest.json \
   --mode full

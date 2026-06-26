@@ -131,8 +131,8 @@ Full VAST run:
 .venv/bin/python scripts/rollouts/generate_fixed_responses.py \
   --provider hf_local \
   --hf-model-id meta-llama/Llama-3.2-1B-Instruct \
-  --variant llama-3.2-1b-instruct \
-  --run-id llama-3.2-1b-full-v0 \
+  --variant llama-3.2-1b-instruct-rolefaithful \
+  --run-id llama-3.2-1b-rolefaithful-full-v0 \
   --hf-cache-dir .cache/huggingface \
   --max-new-tokens 192 \
   --batch-size 20 \
