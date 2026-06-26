@@ -20,12 +20,7 @@ The project does not claim that it has identified the exact documents that creat
 
 - [MVP scope](docs/design/mvp_scope.md)
 - [Pythia training-data contract](docs/design/pythia_training_data_contract.md)
-- [Tasklist](docs/design/tasklist.md)
-- [Repo build map](docs/design/repo_build_map.md)
-- [Project tracker](docs/design/project_tracker.md)
-- [VAST MVP runbook](docs/runbooks/vast_mvp_runbook.md)
-- [VAST MVP checklist](docs/runbooks/vast_mvp_checklist.md)
-- [Research-engineering curriculum](docs/learning/research_engineering_curriculum.md)
+
 
 ## Artifact Policy
 
