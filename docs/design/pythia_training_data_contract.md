@@ -184,3 +184,20 @@ results/sampled_sequences.jsonl
 results/window_sample_summary.json
 results/window_sample_summary.csv
 ```
+
+The first decoder/inspection script is:
+
+```text
+scripts/data/decode_training_sequences.py
+```
+
+It reads `sampled_sequences.jsonl`, decodes `token_ids` with the Pythia
+tokenizer while preserving special tokens, and writes:
+
+```text
+results/decoded_sequences.jsonl
+results/decoded_preview.csv
+results/decode_summary.json
+```
+
+This is still packed-sequence inspection, not raw-document reconstruction.

@@ -66,7 +66,8 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Steering tests | Not started | Need hook implementation and prompt set. |
 | Gradient attribution | Not started | Need Parquet loader, sampler, gradient scorer, and resumable run state. |
 | Training-window planner | Implemented | `scripts/data/plan_training_window.py` maps selected checkpoint intervals to Parquet shard names and `batch_idx` filters. |
-| Training sequence sampler | Implemented, not data-run verified | `scripts/data/sample_training_sequences.py` consumes window plans and samples packed `token_ids` rows from HF/local Parquet shards. |
+| Training sequence sampler | Implemented, data-run external | `scripts/data/sample_training_sequences.py` consumes window plans and samples packed `token_ids` rows from HF/local Parquet shards. |
+| Training sequence decoder | Implemented | `scripts/data/decode_training_sequences.py` consumes sampled `token_ids`, decodes Pythia text previews, and writes inspection artifacts before gradient scoring. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
 
 ## Next Build Order
@@ -74,7 +75,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 1. Regenerate improved coarse and early-dense plots from HF/Colab artifacts and upload them.
 2. Run `scripts/data/plan_training_window.py` to materialize the selected attribution window plan.
 3. Run `scripts/data/sample_training_sequences.py` on a tiny sample from one planned window.
-4. Add decoder preview for sampled sequences.
+4. Run `scripts/data/decode_training_sequences.py` to inspect sampled packed sequences.
 5. Run activation-gradient attribution on a debug sample.
 6. Produce top/bottom sequence tables and source/mapping TODOs.
 7. Add tiny continued-pretraining validation only after the gradient scorer is stable.

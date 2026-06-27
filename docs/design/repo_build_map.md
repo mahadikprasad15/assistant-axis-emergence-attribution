@@ -97,6 +97,9 @@ docs/
 `TrainingSequence`
 : A packed 2049-token sequence from the Pythia preshuffled stream, keyed by `uid`, `batch_idx`, source file, and token ids.
 
+`DecodedTrainingSequencePreview`
+: A tokenizer-decoded inspection artifact for a sampled packed sequence. It stores start/middle/end previews, EOS/EOD counts, tokenizer metadata, and upstream sample provenance. It is not raw-document mapping.
+
 `AttributionScore`
 : Per-sequence score containing loss, gradient metadata, `-cos(grad, v_aa_t)`, and `-cos(grad, v_aa_final)`.
 
@@ -126,6 +129,8 @@ docs/
 | `configs/schemas/assistant_axis_vector.schema.yaml` | Defines one normalized Assistant Axis vector artifact. | assistant-axis builder |
 | `configs/schemas/role_vector.schema.yaml` | Defines role/default mean vector artifacts. | role geometry builders |
 | `configs/schemas/geometry_manifest.schema.yaml` | Defines vector/geometry builder run manifests. | assistant-axis and role-geometry builders |
+| `configs/schemas/training_sequence_sample.schema.yaml` | Defines one sampled packed Pythia training sequence. | training-sequence sampler |
+| `configs/schemas/training_sequence_decoded_preview.schema.yaml` | Defines one decoded preview record for sampled packed sequences. | training-sequence decoder |
 | `configs/schemas/*.schema.yaml` | Future attribution and run manifest schemas. | validators |
 
 ## Source Import From Trait-Geometry Repo
@@ -238,6 +243,7 @@ Runners perform expensive or stateful work.
 | `CheckpointSweepRunner` | checkpoint list, fixed response corpus | per-checkpoint activations, axes, geometry, and reports |
 | `TrainingWindowPlanner` | selected checkpoint windows, training-stream config | Parquet shard list and `batch_idx` filters |
 | `TrainingSequenceSampler` | window plan, HF/local Parquet shards | sampled packed `token_ids` rows |
+| `TrainingSequenceDecoder` | sampled packed `token_ids` rows | decoded preview JSONL/CSV for inspection |
 | `GradientAttributionRunner` | training sequence sample, checkpoint, AA vector | attribution scores |
 | `SteeringRunner` | prompts, model checkpoint, AA vector, alpha schedule | steered completions |
 
@@ -310,6 +316,7 @@ Analyzers compute metrics from existing artifacts.
 | `TrajectoryAnalyzer` | per-checkpoint AA vectors, PC1s, loadings, and reports | cosine-to-final, adjacent cosines, loading correlations, moving roles, and transition windows |
 | `RolloutInspector` | rollout JSONL and manifest | terminal counts and sample records |
 | `ActivationRunInspector` | activation run directory | status/progress/index/tensor/span summary |
+| `TrainingSequenceDecoder` | sampled training sequences | text previews, EOS/EOD counts, tokenizer metadata |
 | `RoleLoadingAnalyzer` | role vectors and AA/PC1 | role loading tables |
 | `AttributionSummaryAnalyzer` | scored training sequences | top/bottom tables and aggregate summaries |
 | `GeometryReportBuilder` | AA summary plus role geometry summary/loadings | sanity report and proceed/caution/stop gate |
@@ -374,7 +381,8 @@ flowchart TD
   L --> M["candidate windows"]
   N["Pythia stream config"] --> O["TrainingWindowPlanner"]
   M --> O
-  O --> P["sampled packed sequences"]
+  O --> P["TrainingSequenceSampler"]
+  P --> U["decoded sequence previews"]
   P --> Q["GradientAttributionRunner"]
   J --> Q
   Q --> R["attribution scores"]

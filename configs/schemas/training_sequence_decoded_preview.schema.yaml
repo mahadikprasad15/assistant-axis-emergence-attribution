@@ -1,0 +1,68 @@
+schema_version: 0.1
+schema_id: training_sequence_decoded_preview
+description: >
+  Contract for decoded previews of sampled packed Pythia training sequences.
+  This artifact is for human inspection before gradient attribution.
+
+required_fields:
+  sample_id:
+    type: string
+    description: Stable id copied from the sampled training sequence record.
+  window_id:
+    type: string
+    description: Attribution window id copied from the sampled record.
+  uid:
+    type: string
+    description: Packed-sequence id from the Parquet stream.
+  batch_idx:
+    type: integer
+    description: Training batch/checkpoint-step index.
+  source_file:
+    type: string
+    description: Parquet shard file name.
+  token_count:
+    type: integer
+    description: Number of token ids in the sampled packed sequence.
+  tokenizer_id:
+    type: string
+    description: Tokenizer used to decode token_ids.
+  tokenizer_revision:
+    type: string_or_null
+    description: Optional tokenizer revision.
+  eos_token_id:
+    type: integer_or_null
+    description: Tokenizer EOS/EOD token id when available.
+  eos_token_count:
+    type: integer
+    description: Count of EOS/EOD token occurrences in token_ids.
+  decoded_char_count:
+    type: integer
+    description: Character count after decoding with special tokens preserved.
+  preview_start:
+    type: string
+    description: Beginning of decoded packed sequence.
+  preview_middle:
+    type: string
+    description: Middle slice of decoded packed sequence.
+  preview_end:
+    type: string
+    description: End of decoded packed sequence.
+  source:
+    type: object
+    description: Links to sampler run and decode run provenance.
+
+optional_fields:
+  decoded_text:
+    type: string
+    description: Full decoded sequence text, only written when explicitly requested.
+
+validation_rules:
+  - sample_id must be unique within a decode run.
+  - token_count should match the upstream sampled record token_count.
+  - decoded previews should be produced with skip_special_tokens=false.
+  - clean_up_tokenization_spaces should be false to avoid changing byte-level text.
+
+notes:
+  - This is not raw-document mapping.
+  - Packed sequences may contain multiple documents separated by EOD/EOS tokens.
+  - This artifact is an inspection gate before activation-gradient scoring.

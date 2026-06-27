@@ -175,8 +175,8 @@ Exit criteria:
 | --- | --- | --- | --- |
 | P6.0 | Write training-window planner design. | done | `docs/design/training_window_planner_design.md` |
 | P6.1 | Implement checkpoint-window to Parquet-file mapping. | done | `scripts/data/plan_training_window.py` |
-| P6.2 | Sample packed 2049-token sequences by `uid`/`batch_idx`. | in_progress | `scripts/data/sample_training_sequences.py`, `configs/schemas/training_sequence_sample.schema.yaml`, `docs/design/training_sequence_sampler_design.md`; dry-run verified, real Parquet sampling next. |
-| P6.3 | Decode sample sequences for inspection. | todo | decoded snippets table |
+| P6.2 | Sample packed 2049-token sequences by `uid`/`batch_idx`. | done | `scripts/data/sample_training_sequences.py`, `configs/schemas/training_sequence_sample.schema.yaml`, `docs/design/training_sequence_sampler_design.md`; dry-run verified, real Parquet sampling runs externally. |
+| P6.3 | Decode sample sequences for inspection. | done | `scripts/data/decode_training_sequences.py`, `configs/schemas/training_sequence_decoded_preview.schema.yaml`, `docs/design/training_sequence_decoder_design.md` |
 | P6.4 | Compute activation-gradient cosine scores against local and final AA. | todo | `scripts/analysis/score_training_sequence_gradients.py` |
 | P6.5 | Produce top/bottom sequence tables and score summaries. | todo | attribution report |
 
