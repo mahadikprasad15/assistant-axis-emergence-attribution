@@ -1,0 +1,52 @@
+schema_version: 0.1
+schema_id: gradient_pressure_pca
+description: >
+  Contract for PCA/SVD analysis over saved per-sequence gradient-pressure
+  vectors from Phase 6A attribution scoring.
+
+required_fields:
+  scope:
+    type: string
+    examples:
+      - global
+      - window
+  scope_id:
+    type: string
+    description: Global scope id or window id.
+  component_index:
+    type: integer
+    description: Zero-based principal component index.
+  records:
+    type: integer
+    description: Number of gradient-pressure vectors in this scope.
+  vector_dim:
+    type: integer
+    description: Hidden dimension of the update-pressure vectors.
+  centered:
+    type: boolean
+    description: Whether vectors were mean-centered before SVD.
+  singular_value:
+    type: number
+  explained_variance_ratio:
+    type: number
+  cumulative_explained_variance_ratio:
+    type: number
+  local_aa_cosine:
+    type: number_or_null
+    description: Cosine between this PC and the local Assistant Axis when available.
+  final_aa_cosine:
+    type: number_or_null
+    description: Cosine between this PC and the final Assistant Axis when available.
+  pc_vector_path:
+    type: string
+    description: Tensor path for this principal component.
+
+validation_rules:
+  - records must be at least 2 for centered PCA.
+  - explained_variance_ratio must be finite.
+  - pc_vector_path must exist.
+  - local_aa_cosine and final_aa_cosine should be orientation-aligned to non-negative when an axis is supplied.
+
+notes:
+  - Input vectors are u_i = -mean_tokens(dL_i/dh_layer).
+  - PCA is structural analysis, not causal proof.

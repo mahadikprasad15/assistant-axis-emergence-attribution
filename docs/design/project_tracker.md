@@ -68,7 +68,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Training-window planner | Implemented | `scripts/data/plan_training_window.py` maps selected checkpoint intervals to Parquet shard names and `batch_idx` filters. |
 | Training sequence sampler | Implemented, data-run external | `scripts/data/sample_training_sequences.py` consumes window plans and samples packed `token_ids` rows from HF/local Parquet shards. |
 | Training sequence decoder | Implemented | `scripts/data/decode_training_sequences.py` consumes sampled `token_ids`, decodes Pythia text previews, and writes inspection artifacts before gradient scoring. |
-| Gradient-pressure PCA | Planned | Shifting-style structural analysis over saved update-pressure vectors after the first scorer works. |
+| Gradient-pressure PCA | Implemented, not artifact-run verified | `scripts/analysis/analyze_gradient_pressure_pca.py` computes global/per-window PCA over saved update-pressure vectors and compares PCs to local/final AA. |
 | Gradient-component interventions | Deferred | Neutralize/amplify/attenuate AA-aligned gradient components only after observational attribution and PCA are stable. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
 
@@ -200,7 +200,7 @@ Every run must include:
 | `ActivationCacheRunner` | done, final checkpoint run passed | `scripts/activations/cache_rollout_activations.py` | Cache pooled residual activations. |
 | `CheckpointSweepRunner` | done, coarse and early dense passed | `scripts/analysis/run_checkpoint_sweep.py` | Run activation, inspection, AA, role geometry, and report stages over selected checkpoints. |
 | `GradientAttributionRunner` | done, model-run external | `scripts/analysis/score_training_sequence_gradients.py` | Score packed training sequences against local/final AA. |
-| `GradientPressurePCAAnalyzer` | todo | `scripts/analysis/analyze_gradient_pressure_pca.py` | Test whether per-sequence update pressure is low-dimensional and AA-aligned. |
+| `GradientPressurePCAAnalyzer` | done, artifact-run external | `scripts/analysis/analyze_gradient_pressure_pca.py` | Test whether per-sequence update pressure is low-dimensional and AA-aligned. |
 | `GradientComponentInterventionRunner` | later | `scripts/analysis/run_gradient_component_intervention.py` | Neutralize/amplify/attenuate AA-aligned gradient components for causal validation. |
 | `SteeringRunner` | later | `scripts/steering/run_axis_steering.py` | Test checkpoint-local causal steering. |
 
@@ -213,7 +213,7 @@ Every run must include:
 | `TrainingWindowPlanner` | done | `scripts/data/plan_training_window.py` | Map checkpoint intervals to Parquet files and batch ranges. |
 | `TrainingSequenceSampler` | done, data-run external | `scripts/data/sample_training_sequences.py` | Sample packed token sequences from planned Parquet windows. |
 | `TrainingSequenceDecoder` | done | `scripts/data/decode_training_sequences.py` | Decode sampled token ids for inspection before attribution scoring. |
-| `GradientPressurePCAAnalyzer` | todo | `scripts/analysis/analyze_gradient_pressure_pca.py` | Test whether per-sequence update pressure is low-dimensional and AA-aligned. |
+| `GradientPressurePCAAnalyzer` | done, artifact-run external | `scripts/analysis/analyze_gradient_pressure_pca.py` | Test whether per-sequence update pressure is low-dimensional and AA-aligned. |
 | `AttributionSummaryAnalyzer` | todo | `scripts/reporting/summarize_attribution.py` | Produce top/bottom tables and aggregate summaries. |
 | final-AA sanity gate | done | `docs/experiments/final_checkpoint_geometry_step143000.md` | Decide whether the axis is meaningful enough to sweep. |
 | checkpoint-transition gate | done for current evidence | `docs/experiments/chosen_attribution_windows.md` | Select attribution windows from geometry curves. |

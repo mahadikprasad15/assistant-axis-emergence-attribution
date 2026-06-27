@@ -69,7 +69,7 @@ window-to-window differences
 This tests whether AA-forming training pressure is concentrated in a
 low-dimensional direction or spread across many directions.
 
-Planned analyzer:
+Analyzer:
 
 ```text
 scripts/analysis/analyze_gradient_pressure_pca.py
@@ -80,8 +80,9 @@ Canonical outputs:
 ```text
 results/gradient_pressure_pca_summary.json
 results/gradient_pressure_pca.csv
-results/gradient_pressure_pc1.pt
-results/gradient_pressure_singular_values.pt
+results/gradient_pressure_components.jsonl
+results/pcs/*.pt
+results/singular_values/*.pt
 ```
 
 ## Extension 2: Gradient Component Intervention Design

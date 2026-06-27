@@ -192,8 +192,8 @@ Exit criteria:
 | ID | Task | Status | Output |
 | --- | --- | --- | --- |
 | P6B.1 | Document Shifting-the-Gradient-inspired extensions. | done | `docs/design/gradient_attribution_extensions_design.md` |
-| P6B.2 | Analyze PCA/SVD over per-sequence update-pressure vectors. | todo | `scripts/analysis/analyze_gradient_pressure_pca.py` |
-| P6B.3 | Compare PC1/top-k gradient-pressure directions with local and final AA. | todo | PCA summary/report |
+| P6B.2 | Analyze PCA/SVD over per-sequence update-pressure vectors. | done | `scripts/analysis/analyze_gradient_pressure_pca.py`, `configs/schemas/gradient_pressure_pca.schema.yaml`, `docs/design/gradient_pressure_pca_analyzer_design.md`; syntax/CLI verified, artifact-run external. |
+| P6B.3 | Compare PC1/top-k gradient-pressure directions with local and final AA. | done | global and per-window PCA component rows with local/final AA cosines |
 | P6B.4 | Build top/bottom/random sequence subset manifests for causal validation. | todo | subset manifests |
 | P6B.5 | Design gradient-component interventions: neutralize, amplify, attenuate AA component. | later | intervention design + runner stub |
 
