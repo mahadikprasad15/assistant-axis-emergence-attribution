@@ -66,16 +66,18 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Steering tests | Not started | Need hook implementation and prompt set. |
 | Gradient attribution | Not started | Need Parquet loader, sampler, gradient scorer, and resumable run state. |
 | Training-window planner | Implemented | `scripts/data/plan_training_window.py` maps selected checkpoint intervals to Parquet shard names and `batch_idx` filters. |
+| Training sequence sampler | Implemented, not data-run verified | `scripts/data/sample_training_sequences.py` consumes window plans and samples packed `token_ids` rows from HF/local Parquet shards. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
 
 ## Next Build Order
 
 1. Regenerate improved coarse and early-dense plots from HF/Colab artifacts and upload them.
 2. Run `scripts/data/plan_training_window.py` to materialize the selected attribution window plan.
-3. Implement Pythia Parquet sampler for planned windows.
-4. Run activation-gradient attribution on a debug sample.
-5. Produce top/bottom sequence tables and source/mapping TODOs.
-6. Add tiny continued-pretraining validation only after the gradient scorer is stable.
+3. Run `scripts/data/sample_training_sequences.py` on a tiny sample from one planned window.
+4. Add decoder preview for sampled sequences.
+5. Run activation-gradient attribution on a debug sample.
+6. Produce top/bottom sequence tables and source/mapping TODOs.
+7. Add tiny continued-pretraining validation only after the gradient scorer is stable.
 
 The detailed task queue lives in `docs/design/tasklist.md`; update it together with this tracker.
 
@@ -201,6 +203,7 @@ Every run must include:
 | `TrajectoryAnalyzer` | done, coarse and early dense passed | `scripts/analysis/analyze_axis_trajectory.py` | Find stabilization or transition windows. |
 | `ActivationRunInspector` | done | `scripts/activations/inspect_activation_run.py` | Inspect activation run status, progress, index rows, tensor files, spans, and shapes. |
 | `TrainingWindowPlanner` | done | `scripts/data/plan_training_window.py` | Map checkpoint intervals to Parquet files and batch ranges. |
+| `TrainingSequenceSampler` | in_progress | `scripts/data/sample_training_sequences.py` | Sample packed token sequences from planned Parquet windows. |
 | `AttributionSummaryAnalyzer` | todo | `scripts/reporting/summarize_attribution.py` | Produce top/bottom tables and aggregate summaries. |
 | final-AA sanity gate | done | `docs/experiments/final_checkpoint_geometry_step143000.md` | Decide whether the axis is meaningful enough to sweep. |
 | checkpoint-transition gate | done for current evidence | `docs/experiments/chosen_attribution_windows.md` | Select attribution windows from geometry curves. |

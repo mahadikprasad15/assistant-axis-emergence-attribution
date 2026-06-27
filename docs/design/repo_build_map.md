@@ -237,6 +237,7 @@ Runners perform expensive or stateful work.
 | `ActivationCacheRunner` | validated response JSONL, model checkpoint, layer/pooling policy | activation artifacts |
 | `CheckpointSweepRunner` | checkpoint list, fixed response corpus | per-checkpoint activations, axes, geometry, and reports |
 | `TrainingWindowPlanner` | selected checkpoint windows, training-stream config | Parquet shard list and `batch_idx` filters |
+| `TrainingSequenceSampler` | window plan, HF/local Parquet shards | sampled packed `token_ids` rows |
 | `GradientAttributionRunner` | training sequence sample, checkpoint, AA vector | attribution scores |
 | `SteeringRunner` | prompts, model checkpoint, AA vector, alpha schedule | steered completions |
 

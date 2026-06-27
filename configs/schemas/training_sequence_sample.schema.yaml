@@ -1,0 +1,41 @@
+schema_version: 0.1
+schema_id: training_sequence_sample
+description: >
+  Contract for sampled packed Pythia training sequences selected from planned
+  checkpoint windows.
+
+required_fields:
+  sample_id:
+    type: string
+    description: Stable id for this sampled row, usually window_id plus uid.
+  window_id:
+    type: string
+    description: Links to a training-window plan record.
+  uid:
+    type: string
+    description: Packed-sequence id from the Parquet stream.
+  batch_idx:
+    type: integer
+    description: Training batch/checkpoint-step index.
+  source_file:
+    type: string
+    description: Parquet shard file name, for example train-001000.parquet.
+  token_ids:
+    type: array[integer]
+    description: Packed token ids consumed by Pythia training.
+  token_count:
+    type: integer
+    expected_for_pythia: 2049
+  source:
+    type: object
+    description: Dataset repo, plan run, sampler run, and sampling provenance.
+
+validation_rules:
+  - batch_idx must satisfy the source window row_filter.
+  - token_count should normally equal 2049 for Pythia packed sequences.
+  - sample_id must be unique within a sampler run.
+  - source_file must be one of the planned parquet_files for the window.
+
+notes:
+  - This is still a packed sequence, not a raw Pile document.
+  - Decoded text preview is a separate downstream artifact.

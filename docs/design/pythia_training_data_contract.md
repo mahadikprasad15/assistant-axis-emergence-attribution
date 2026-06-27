@@ -169,3 +169,18 @@ results/window_plan.csv
 
 The plan is consumed by the sampler and records exact Parquet files plus
 `batch_idx` filters for each selected attribution window.
+
+The first sampler script is:
+
+```text
+scripts/data/sample_training_sequences.py
+```
+
+It reads `window_plan.jsonl`, loads the planned Parquet shards either from
+Hugging Face or a local directory, filters rows by `batch_idx`, and writes:
+
+```text
+results/sampled_sequences.jsonl
+results/window_sample_summary.json
+results/window_sample_summary.csv
+```
