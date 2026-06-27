@@ -144,3 +144,28 @@ Every attribution run must record:
 - gradient score definition and sign convention
 - random seed
 - output paths under `artifacts/runs/...`
+
+## First Planner Artifact
+
+The first attribution data-stage script is:
+
+```text
+scripts/data/plan_training_window.py
+```
+
+It reads:
+
+```text
+configs/datasets/pythia_preshuffled_stream.yaml
+```
+
+and writes:
+
+```text
+results/window_plan.json
+results/window_plan.jsonl
+results/window_plan.csv
+```
+
+The plan is consumed by the sampler and records exact Parquet files plus
+`batch_idx` filters for each selected attribution window.

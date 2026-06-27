@@ -33,9 +33,9 @@ Exit criteria:
 | P1.0 | Import or copy source-pinned Assistant Axis role/question material from the trait-geometry repo with provenance. | done | `configs/rollouts/assistant_axis_source_material_v0.yaml` |
 | P1.1 | Define experiment config for the first vertical slice. | done | `configs/experiments/pythia_410m_mvp_v0.yaml` |
 | P1.2 | Define model config for `EleutherAI/pythia-410m-deduped`. | done | `configs/models/pythia_410m_deduped.yaml` |
-| P1.3 | Define dataset/training-stream config. | todo | `configs/datasets/pythia_preshuffled_stream.yaml` |
+| P1.3 | Define dataset/training-stream config. | done | `configs/datasets/pythia_preshuffled_stream.yaml` |
 | P1.4 | Define new rollout corpus config: 48 roles, 20 shared questions, 4 default prompts, generation policy. | done | `configs/rollouts/assistant_axis_roles_v0.yaml` |
-| P1.5 | Define JSON/JSONL schemas for rollout records, generated response records, activation records, vector records, attribution records, and run manifests. | in_progress | Rollout record, rollout manifest, generated response record/manifest, activation record, assistant-axis vector, role-vector, and geometry manifest schemas exist; attribution/run schemas remain. |
+| P1.5 | Define JSON/JSONL schemas for rollout records, generated response records, activation records, vector records, attribution records, and run manifests. | in_progress | Rollout record, rollout manifest, generated response record/manifest, activation record, assistant-axis vector, role-vector, geometry manifest, and training-window plan schemas exist; attribution/run schemas remain. |
 | P1.6 | Add schema validation helpers. | todo | `src/assistant_axis_attribution/schemas/` |
 
 Exit criteria:
@@ -173,7 +173,8 @@ Exit criteria:
 
 | ID | Task | Status | Output |
 | --- | --- | --- | --- |
-| P6.1 | Implement checkpoint-window to Parquet-file mapping. | todo | `scripts/data/plan_training_window.py` |
+| P6.0 | Write training-window planner design. | done | `docs/design/training_window_planner_design.md` |
+| P6.1 | Implement checkpoint-window to Parquet-file mapping. | done | `scripts/data/plan_training_window.py` |
 | P6.2 | Sample packed 2049-token sequences by `uid`/`batch_idx`. | todo | `data/training_windows/*.jsonl` or run input snapshot |
 | P6.3 | Decode sample sequences for inspection. | todo | decoded snippets table |
 | P6.4 | Compute activation-gradient cosine scores against local and final AA. | todo | `scripts/analysis/score_training_sequence_gradients.py` |

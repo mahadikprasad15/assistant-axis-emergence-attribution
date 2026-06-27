@@ -1,0 +1,49 @@
+schema_version: 0.1
+schema_id: training_window_plan
+description: >
+  Contract for checkpoint-window plans that map attribution windows to packed
+  Pythia training-stream Parquet shards and batch_idx filters.
+
+required_fields:
+  window_id:
+    type: string
+    description: Stable id, for example step128_to_step256.
+  from_revision:
+    type: string
+    description: Inclusive starting checkpoint revision.
+  to_revision:
+    type: string
+    description: Exclusive ending checkpoint revision.
+  batch_idx_start:
+    type: integer
+    description: Inclusive batch_idx lower bound.
+  batch_idx_end_exclusive:
+    type: integer
+    description: Exclusive batch_idx upper bound.
+  parquet_files:
+    type: array[string]
+    description: Parquet shard names whose batch ranges intersect the window.
+  row_filter:
+    type: object
+    required:
+      - batch_idx_gte
+      - batch_idx_lt
+  sample_policy:
+    type: object
+    description: Requested sample count, seed, and sampling mode for later samplers.
+  source:
+    type: object
+    description: Dataset config, repo id, and planner provenance.
+
+validation_rules:
+  - batch_idx_start must be less than batch_idx_end_exclusive.
+  - from_revision and to_revision must parse as step integers.
+  - parquet_files must be non-empty.
+  - file names must follow train-XXXXXX.parquet.
+  - row_filter.batch_idx_gte must equal batch_idx_start.
+  - row_filter.batch_idx_lt must equal batch_idx_end_exclusive.
+
+notes:
+  - This is a plan contract only. It does not require that Parquet files have
+    already been downloaded.
+  - The first attribution unit is a packed sequence row, not a raw document.

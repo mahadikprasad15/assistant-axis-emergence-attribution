@@ -37,6 +37,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Rollout corpus artifact | Done with warnings | `data/rollouts/assistant_axis_rollouts_v0.jsonl` and manifest exist; validation passed with expected warnings for placeholder role instructions. |
 | Rollout inspector | Done | `scripts/rollouts/inspect_rollouts.py` prints manifest status, count tables, and sample records; design doc includes flow and helper diagrams. |
 | Model config | Done | `configs/models/pythia_410m_deduped.yaml` pins Pythia-410M-deduped model facts, checkpoint naming, and layer 12 as the first middle-layer readout. |
+| Training stream config | Done | `configs/datasets/pythia_preshuffled_stream.yaml` records the practical Parquet repo, official fallback, shard mapping, and selected attribution windows. |
 | Experiment config | Done | `configs/experiments/pythia_410m_mvp_v0.yaml` defines the coarse 8-checkpoint sweep, response-token pooling, AA variants, and artifact layout. |
 | Activation schema | Done | `configs/schemas/activation_record.schema.yaml` defines activation index records and response-token span requirements. |
 | Activation config design | Done | `docs/design/activation_config_design.md` explains the generated-response requirement and activation flow with diagrams. |
@@ -64,15 +65,17 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | HF artifact upload | Done for MVP artifacts | `scripts/reporting/upload_artifacts_to_hf.py` uploaded curated artifacts to `Prasadmahadik/assistant-axis-emergence-attribution`. |
 | Steering tests | Not started | Need hook implementation and prompt set. |
 | Gradient attribution | Not started | Need Parquet loader, sampler, gradient scorer, and resumable run state. |
+| Training-window planner | Implemented | `scripts/data/plan_training_window.py` maps selected checkpoint intervals to Parquet shard names and `batch_idx` filters. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
 
 ## Next Build Order
 
 1. Regenerate improved coarse and early-dense plots from HF/Colab artifacts and upload them.
-2. Implement Pythia Parquet stream loader with explicit checkpoint-window mapping.
-3. Run activation-gradient attribution on a debug sample.
-4. Produce top/bottom sequence tables and source/mapping TODOs.
-5. Add tiny continued-pretraining validation only after the gradient scorer is stable.
+2. Run `scripts/data/plan_training_window.py` to materialize the selected attribution window plan.
+3. Implement Pythia Parquet sampler for planned windows.
+4. Run activation-gradient attribution on a debug sample.
+5. Produce top/bottom sequence tables and source/mapping TODOs.
+6. Add tiny continued-pretraining validation only after the gradient scorer is stable.
 
 The detailed task queue lives in `docs/design/tasklist.md`; update it together with this tracker.
 
@@ -197,7 +200,7 @@ Every run must include:
 | --- | --- | --- | --- |
 | `TrajectoryAnalyzer` | done, coarse and early dense passed | `scripts/analysis/analyze_axis_trajectory.py` | Find stabilization or transition windows. |
 | `ActivationRunInspector` | done | `scripts/activations/inspect_activation_run.py` | Inspect activation run status, progress, index rows, tensor files, spans, and shapes. |
-| `TrainingWindowPlanner` | todo | `scripts/data/plan_training_window.py` | Map checkpoint intervals to Parquet files and batch ranges. |
+| `TrainingWindowPlanner` | done | `scripts/data/plan_training_window.py` | Map checkpoint intervals to Parquet files and batch ranges. |
 | `AttributionSummaryAnalyzer` | todo | `scripts/reporting/summarize_attribution.py` | Produce top/bottom tables and aggregate summaries. |
 | final-AA sanity gate | done | `docs/experiments/final_checkpoint_geometry_step143000.md` | Decide whether the axis is meaningful enough to sweep. |
 | checkpoint-transition gate | done for current evidence | `docs/experiments/chosen_attribution_windows.md` | Select attribution windows from geometry curves. |

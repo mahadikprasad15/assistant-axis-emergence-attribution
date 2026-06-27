@@ -236,6 +236,7 @@ Runners perform expensive or stateful work.
 | `FixedResponseGeneratorProvider` | rollout JSONL, local Hugging Face generation config | raw generated responses for importer validation |
 | `ActivationCacheRunner` | validated response JSONL, model checkpoint, layer/pooling policy | activation artifacts |
 | `CheckpointSweepRunner` | checkpoint list, fixed response corpus | per-checkpoint activations, axes, geometry, and reports |
+| `TrainingWindowPlanner` | selected checkpoint windows, training-stream config | Parquet shard list and `batch_idx` filters |
 | `GradientAttributionRunner` | training sequence sample, checkpoint, AA vector | attribution scores |
 | `SteeringRunner` | prompts, model checkpoint, AA vector, alpha schedule | steered completions |
 

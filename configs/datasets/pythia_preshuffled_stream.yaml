@@ -1,0 +1,95 @@
+schema_version: 0.1
+dataset_id: pythia_pile_deduped_preshuffled_parquet
+description: >
+  Practical Parquet repackaging of the Pythia deduplicated preshuffled packed
+  training stream. This is the first data source for Assistant Axis attribution.
+
+practical_repo:
+  repo_id: pietrolesci/pile-deduped-pythia-preshuffled
+  repo_type: dataset
+  format: parquet
+  data_dir: data
+  file_pattern: train-{shard_end_step:06d}.parquet
+  columns:
+    uid:
+      type: string
+      description: Stable packed-sequence id in the community dataset.
+    batch_idx:
+      type: integer
+      description: Pythia training batch/checkpoint-step index for the packed sequence.
+    token_ids:
+      type: array[integer]
+      description: Packed token ids consumed by GPT-NeoX/Pythia training.
+  expected_token_count: 2049
+
+official_fallback:
+  repo_id: EleutherAI/pile-deduped-pythia-preshuffled
+  repo_type: dataset
+  format: gpt_neox_idx_bin
+  note: >
+    Official EleutherAI preshuffled packed stream. Use as verification fallback
+    if the community Parquet layout is unavailable or questioned.
+
+window_mapping:
+  batch_idx_semantics: half_open_interval
+  interval_rule: "stepA -> stepB maps to batch_idx >= A and batch_idx < B"
+  shard_size_steps: 1000
+  shard_file_rule: >
+    train-001000.parquet contains batch_idx 0..999, train-002000.parquet
+    contains batch_idx 1000..1999, and so on.
+  examples:
+    - window_id: step128_to_step256
+      batch_idx_start: 128
+      batch_idx_end_exclusive: 256
+      parquet_files:
+        - train-001000.parquet
+    - window_id: step1000_to_step2000
+      batch_idx_start: 1000
+      batch_idx_end_exclusive: 2000
+      parquet_files:
+        - train-002000.parquet
+    - window_id: step80000_to_step143000
+      batch_idx_start: 80000
+      batch_idx_end_exclusive: 143000
+      parquet_file_range: train-081000.parquet through train-143000.parquet
+
+selected_attribution_windows:
+  primary:
+    - from_revision: step128
+      to_revision: step256
+      priority: 1
+      rationale: Strong early-dense transition.
+    - from_revision: step256
+      to_revision: step512
+      priority: 1
+      rationale: Strongest observed formation/reorganization window.
+    - from_revision: step512
+      to_revision: step1000
+      priority: 2
+      rationale: Continued consolidation after the strongest early window.
+    - from_revision: step1000
+      to_revision: step2000
+      priority: 2
+      rationale: Strongest post-1000 stabilization window.
+  secondary:
+    - from_revision: step2000
+      to_revision: step3000
+      priority: 3
+      rationale: Lower-priority continued refinement.
+  controls:
+    - from_revision: step0
+      to_revision: step1
+      priority: control
+      rationale: Very early update control.
+    - from_revision: step80000
+      to_revision: step143000
+      priority: control
+      rationale: Late stable-training control.
+
+claim_boundary:
+  initial_unit: packed_2049_token_sequence
+  allowed_claim: >
+    These packed Pythia training sequences exert first-order Assistant-Axis
+    gradient pressure at the selected checkpoint.
+  deferred_claim: >
+    These original raw documents caused the Assistant Axis.
