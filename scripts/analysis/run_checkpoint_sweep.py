@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -37,6 +38,14 @@ def load_json(path: Path) -> dict[str, Any] | None:
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def append_jsonl(path: Path, record: dict[str, Any]) -> None:
@@ -166,6 +175,72 @@ def status_is_completed(run_path: Path) -> bool:
     return bool(status and status.get("state") == "completed")
 
 
+def validate_checkpoint_artifacts(paths: dict[str, Path | str]) -> dict[str, Any]:
+    stage_requirements = {
+        "activation": (
+            Path(paths["activation_dir"]),
+            ["meta/status.json", "meta/run_manifest.json", "checkpoints/progress.json", "results/activation_index.jsonl"],
+        ),
+        "assistant_axis": (
+            Path(paths["aa_dir"]),
+            [
+                "meta/status.json",
+                "meta/run_manifest.json",
+                "checkpoints/progress.json",
+                "results/assistant_axis_vector.pt",
+                "results/default_mean.pt",
+                "results/contrast_mean.pt",
+                "results/assistant_axis_summary.json",
+            ],
+        ),
+        "role_geometry": (
+            Path(paths["role_dir"]),
+            [
+                "meta/status.json",
+                "meta/run_manifest.json",
+                "checkpoints/progress.json",
+                "results/role_pc1.pt",
+                "results/role_vectors.jsonl",
+                "results/role_loadings.csv",
+                "results/role_geometry_summary.json",
+            ],
+        ),
+        "geometry_report": (
+            Path(paths["report_dir"]),
+            ["meta/status.json", "meta/run_manifest.json", "checkpoints/progress.json", "results/geometry_metrics.json", "results/geometry_report.md"],
+        ),
+    }
+    inventory: dict[str, Any] = {}
+    for stage, (stage_dir, relative_paths) in stage_requirements.items():
+        if not status_is_completed(stage_dir):
+            raise RuntimeError(f"checkpoint stage is not completed: {stage_dir}")
+        files = []
+        for relative_path in relative_paths:
+            artifact_path = stage_dir / relative_path
+            if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
+                raise FileNotFoundError(f"missing or empty checkpoint artifact: {artifact_path}")
+            files.append(
+                {
+                    "path": str(artifact_path),
+                    "size_bytes": artifact_path.stat().st_size,
+                    "sha256": file_sha256(artifact_path),
+                }
+            )
+        inventory[stage] = {"run_dir": str(stage_dir), "required_files": files}
+
+    role_dir = Path(paths["role_dir"])
+    role_index = role_dir / "results" / "role_vectors.jsonl"
+    role_records = [json.loads(line) for line in role_index.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not role_records:
+        raise RuntimeError(f"role vector index is empty: {role_index}")
+    missing_role_vectors = [record.get("vector_path") for record in role_records if not Path(str(record.get("vector_path", ""))).is_file()]
+    if missing_role_vectors:
+        raise FileNotFoundError(f"missing role/default vectors referenced by {role_index}: {missing_role_vectors[:10]}")
+    inventory["role_geometry"]["role_vector_count"] = len(role_records)
+    inventory["role_geometry"]["role_vector_paths"] = [str(record["vector_path"]) for record in role_records]
+    return inventory
+
+
 def command_with_optional_cache(command: list[str], hf_cache_dir: Path | None) -> list[str]:
     if hf_cache_dir is None:
         return command
@@ -195,6 +270,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-progress", action="store_true")
     parser.add_argument("--force-completed", action="store_true")
+    parser.add_argument("--hf-upload-repo-id", default=None, help="If set, upload each validated checkpoint immediately.")
+    parser.add_argument("--hf-upload-repo-type", default="dataset", choices=["dataset", "model", "space"])
+    parser.add_argument("--hf-upload-path-in-repo", default="pythia410m-mvp-v0")
     return parser
 
 
@@ -264,7 +342,7 @@ def main() -> int:
         },
     )
 
-    total_stages = len(specs) * 5
+    total_stages = len(specs) * (6 if args.hf_upload_repo_id else 5)
     progress_bar = make_progress_bar(total_stages, enabled=not args.no_progress)
     completed: list[dict[str, Any]] = []
     failed_stage: dict[str, Any] | None = None
@@ -366,6 +444,7 @@ def main() -> int:
             metrics = load_json(metrics_path) if metrics_path.exists() else None
             stage_record["stages"]["geometry_report"] = "completed" if status_is_completed(paths["report_dir"]) else "submitted"
             stage_record["metrics"] = metrics or {}
+            stage_record["artifact_inventory"] = validate_checkpoint_artifacts(paths) if not args.dry_run else {}
             completed.append(stage_record)
             if progress_bar:
                 progress_bar.update(1)
@@ -381,6 +460,29 @@ def main() -> int:
                 },
             )
             write_json(summary_path, {"schema_version": "0.1", "checkpoints": completed})
+
+            if args.hf_upload_repo_id and not args.dry_run:
+                upload_cmd = [
+                    sys.executable,
+                    "scripts/reporting/upload_artifacts_to_hf.py",
+                    "--repo-id",
+                    args.hf_upload_repo_id,
+                    "--repo-type",
+                    args.hf_upload_repo_type,
+                    "--path-in-repo",
+                    args.hf_upload_path_in_repo,
+                    "--no-create-repo",
+                    "--run-id",
+                    f"{args.sweep_run_id}-{revision}-checkpoint-upload-v0",
+                ]
+                for artifact_path in [sweep_dir, paths["activation_dir"], paths["aa_dir"], paths["role_dir"], paths["report_dir"]]:
+                    upload_cmd.extend(["--artifact-path", str(artifact_path)])
+                subprocess_run(upload_cmd, log_path, False)
+                stage_record["stages"]["artifact_upload"] = "completed"
+                write_json(summary_path, {"schema_version": "0.1", "checkpoints": completed})
+                if progress_bar:
+                    progress_bar.update(1)
+                    progress_bar.set_postfix({"checkpoint": revision, "upload": "verified"}, refresh=True)
 
         if args.dry_run:
             final_state = "dry_run"

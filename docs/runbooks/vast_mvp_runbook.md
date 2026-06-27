@@ -442,6 +442,21 @@ The uploader creates the dataset repo if it does not already exist. It uploads t
 
 After uploading, the uploader lists the remote repository and fails unless every expected local file is present remotely. A sweep upload is therefore incomplete if its summary was uploaded but its referenced stage directories were not.
 
+Upload a completed sweep immediately, including all referenced checkpoint tensors:
+
+```bash
+.venv/bin/python scripts/reporting/upload_artifacts_to_hf.py \
+  --repo-id YOUR_HF_USERNAME/assistant-axis-emergence-attribution \
+  --repo-type dataset \
+  --path-in-repo pythia410m-mvp-v0 \
+  --sweep-run-dir artifacts/runs/.../checkpoint-sweep-layer12/SWEEP_RUN_ID \
+  --no-create-repo
+```
+
+When `--sweep-run-dir` is supplied, the uploader selects only that sweep plus every activation, AA, role-geometry, and report directory referenced by its summary. This mode is intended for immediate checkpoint-safe uploads from ephemeral GPU instances.
+
+For ephemeral instances, pass `--hf-upload-repo-id USER/DATASET` to `run_checkpoint_sweep.py`. After every checkpoint, the runner validates the complete tensor inventory, uploads that checkpoint and live sweep metadata, verifies the remote file list, and only then advances to the next checkpoint.
+
 It does not upload:
 
 - `.cache/huggingface`,

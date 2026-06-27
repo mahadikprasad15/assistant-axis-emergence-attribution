@@ -166,10 +166,10 @@ def expand_sweep_dependencies(records: list[dict[str, Any]]) -> list[dict[str, A
     return list(deduplicated.values())
 
 
-def collect_artifacts(allow_missing: bool) -> list[dict[str, Any]]:
+def collect_artifacts(allow_missing: bool, artifact_specs: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     missing_required: list[str] = []
-    for item in expand_sweep_dependencies(DEFAULT_ARTIFACTS):
+    for item in expand_sweep_dependencies(artifact_specs or DEFAULT_ARTIFACTS):
         path = Path(item["path"])
         exists = path.exists()
         if item["required"] and not exists:
@@ -281,6 +281,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--private", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--create-repo", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--allow-missing", action="store_true")
+    parser.add_argument(
+        "--sweep-run-dir",
+        type=Path,
+        action="append",
+        default=[],
+        help="Upload only this sweep run and every checkpoint stage it references. Repeat for multiple sweeps.",
+    )
+    parser.add_argument(
+        "--artifact-path",
+        type=Path,
+        action="append",
+        default=[],
+        help="Upload only this explicit file or directory. Repeat for multiple artifacts.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--output-root", type=Path, default=Path("artifacts/runs"))
     parser.add_argument("--experiment-name", default="assistant_axis_attribution")
@@ -313,7 +327,17 @@ def main() -> int:
     status_path = meta_dir / "status.json"
     manifest_path = results_dir / "hf_upload_manifest.json"
     try:
-        artifact_records = collect_artifacts(args.allow_missing)
+        artifact_specs = None
+        if args.sweep_run_dir or args.artifact_path:
+            artifact_specs = [
+                {"kind": f"explicit_checkpoint_sweep_run_{index}", "path": str(path), "required": True}
+                for index, path in enumerate(args.sweep_run_dir)
+            ]
+            artifact_specs.extend(
+                {"kind": f"explicit_artifact_{index}", "path": str(path), "required": True}
+                for index, path in enumerate(args.artifact_path)
+            )
+        artifact_records = collect_artifacts(args.allow_missing, artifact_specs)
         uploaded = upload_artifacts(args, artifact_records)
         remote_verification = None if args.dry_run else verify_remote_artifacts(args, artifact_records)
         total_bytes = sum(item["size_bytes"] for item in artifact_records if item["exists"])
