@@ -163,7 +163,7 @@ Exit criteria:
 | P5.8 | Select candidate emergence/refinement windows. | done | `docs/experiments/chosen_attribution_windows.md` |
 | P5.9 | Upload curated MVP artifacts to Hugging Face. | done | HF dataset `Prasadmahadik/assistant-axis-emergence-attribution` contains fixed responses, final checkpoint artifacts, sweeps, trajectories, and plots. |
 | P5.10 | Define 1000-to-5000 dense checkpoint sweep. | done | `configs/experiments/pythia_410m_dense_1000_5000_v0.yaml` |
-| P5.11 | Run 1000-to-5000 dense checkpoint sweep. | todo | `dense-1000-5000-full-v0` sweep, trajectory, and plots |
+| P5.11 | Run 1000-to-5000 dense checkpoint sweep. | done | `dense-1000-5000-full-v1` sweep, trajectory, and plots; see `docs/experiments/dense_1000_5000_sweep.md`. |
 
 Exit criteria:
 

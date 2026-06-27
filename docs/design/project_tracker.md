@@ -58,8 +58,8 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Role geometry design | Done | `docs/design/role_geometry_builder_design.md` explains role/default means, PC1, loadings, and AA-PC1 alignment. |
 | Role geometry builder | Done | `scripts/analysis/build_role_geometry.py` built final, coarse, and early-dense PC1/loadings artifacts. |
 | Geometry sanity report | Done | Final checkpoint report produced `gate: proceed` with AA-PC1 cosine about `0.9226`. |
-| Checkpoint sweep | Done for coarse and early dense; 1000-to-5000 pending | `scripts/analysis/run_checkpoint_sweep.py` ran coarse 8 and early dense 0-1000 sweeps. Next sweep config is `configs/experiments/pythia_410m_dense_1000_5000_v0.yaml`. |
-| Axis trajectory analyzer | Done for coarse and early dense | `scripts/analysis/analyze_axis_trajectory.py` produced uploaded trajectory artifacts for coarse and early dense runs. |
+| Checkpoint sweep | Done for coarse, early dense, and 1000-to-5000 dense | `scripts/analysis/run_checkpoint_sweep.py` ran coarse 8, early dense 0-1000, and dense 1000-5000 sweeps. |
+| Axis trajectory analyzer | Done for coarse, early dense, and 1000-to-5000 dense | `scripts/analysis/analyze_axis_trajectory.py` produced trajectory artifacts for all three sweeps. |
 | Axis trajectory plots | Done, style improved | `scripts/reporting/plot_axis_trajectory.py` writes trajectory plots; rerun plot packs after style update. |
 | HF artifact upload | Done for MVP artifacts | `scripts/reporting/upload_artifacts_to_hf.py` uploaded curated artifacts to `Prasadmahadik/assistant-axis-emergence-attribution`. |
 | Steering tests | Not started | Need hook implementation and prompt set. |
@@ -69,12 +69,10 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 ## Next Build Order
 
 1. Regenerate improved coarse and early-dense plots from HF/Colab artifacts and upload them.
-2. Run the `step1000 -> step5000` dense sweep from `configs/experiments/pythia_410m_dense_1000_5000_v0.yaml`.
-3. Analyze and plot the 1000-to-5000 dense trajectory.
-4. Implement Pythia Parquet stream loader with explicit checkpoint-window mapping.
-5. Run activation-gradient attribution on a debug sample.
-6. Produce top/bottom sequence tables and source/mapping TODOs.
-7. Add tiny continued-pretraining validation only after the gradient scorer is stable.
+2. Implement Pythia Parquet stream loader with explicit checkpoint-window mapping.
+3. Run activation-gradient attribution on a debug sample.
+4. Produce top/bottom sequence tables and source/mapping TODOs.
+5. Add tiny continued-pretraining validation only after the gradient scorer is stable.
 
 The detailed task queue lives in `docs/design/tasklist.md`; update it together with this tracker.
 

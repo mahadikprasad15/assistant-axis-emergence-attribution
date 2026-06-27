@@ -333,7 +333,7 @@ Gates create explicit proceed/pivot decisions.
 | Gate | Question | Output |
 | --- | --- | --- |
 | final-AA sanity gate | Does final AA align with role PC1 enough to continue? | `docs/experiments/final_checkpoint_geometry_step143000.md` |
-| checkpoint-transition gate | Which windows are worth attribution? | `docs/experiments/chosen_attribution_windows.md` |
+| checkpoint-transition gate | Which windows are worth attribution? | `docs/experiments/chosen_attribution_windows.md`, `docs/experiments/dense_1000_5000_sweep.md` |
 | attribution-debug gate | Are gradient scores stable and interpretable enough for 10k samples? | proceed/pivot note |
 | causal-validation gate | Is continued-pretraining worth the compute? | go/no-go decision |
 
