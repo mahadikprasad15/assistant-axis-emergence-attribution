@@ -140,6 +140,7 @@ docs/
 | `configs/schemas/geometry_manifest.schema.yaml` | Defines vector/geometry builder run manifests. | assistant-axis and role-geometry builders |
 | `configs/schemas/training_sequence_sample.schema.yaml` | Defines one sampled packed Pythia training sequence. | training-sequence sampler |
 | `configs/schemas/training_sequence_decoded_preview.schema.yaml` | Defines one decoded preview record for sampled packed sequences. | training-sequence decoder |
+| `configs/schemas/training_sequence_attribution_score.schema.yaml` | Defines one activation-gradient attribution score. | gradient-attribution runner |
 | `configs/schemas/*.schema.yaml` | Future attribution and run manifest schemas. | validators |
 
 ## Source Import From Trait-Geometry Repo

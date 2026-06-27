@@ -64,7 +64,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Axis trajectory plots | Done, style improved | `scripts/reporting/plot_axis_trajectory.py` writes trajectory plots; rerun plot packs after style update. |
 | HF artifact upload | Done for MVP artifacts | `scripts/reporting/upload_artifacts_to_hf.py` uploaded curated artifacts to `Prasadmahadik/assistant-axis-emergence-attribution`. |
 | Steering tests | Not started | Need hook implementation and prompt set. |
-| Gradient attribution | Not started | Need Parquet loader, sampler, gradient scorer, and resumable run state. |
+| Gradient attribution | Implemented, not model-run verified | `scripts/analysis/score_training_sequence_gradients.py` scores packed sequences by `cos(-mean_tokens(dL/dh), v_AA)` and can save update-pressure vectors for PCA. |
 | Training-window planner | Implemented | `scripts/data/plan_training_window.py` maps selected checkpoint intervals to Parquet shard names and `batch_idx` filters. |
 | Training sequence sampler | Implemented, data-run external | `scripts/data/sample_training_sequences.py` consumes window plans and samples packed `token_ids` rows from HF/local Parquet shards. |
 | Training sequence decoder | Implemented | `scripts/data/decode_training_sequences.py` consumes sampled `token_ids`, decodes Pythia text previews, and writes inspection artifacts before gradient scoring. |
@@ -97,6 +97,7 @@ The detailed task queue lives in `docs/design/tasklist.md`; update it together w
 | `docs/design/activation_cache_runbook.md` | Activation smoke run and inspection procedure. | Activation commands, artifact paths, or proceed gates change. |
 | `docs/design/assistant_axis_builder_design.md` | AA vector math and artifact contract. | Axis variants, vector outputs, or selection rules change. |
 | `docs/design/geometry_report_design.md` | Final-checkpoint geometry sanity gate. | Gate criteria or report outputs change. |
+| `docs/design/training_sequence_gradient_scorer_design.md` | Phase 6A attribution scorer design. | Gradient object, scoring rule, or scorer outputs change. |
 | `docs/design/gradient_attribution_extensions_design.md` | Shifting-style PCA and causal-extension plan. | Gradient-pressure PCA, intervention, or validation design changes. |
 | `docs/runbooks/vast_mvp_runbook.md` | End-to-end VAST commands for the first final-checkpoint report. | VAST setup, generator model, run ids, or artifact paths change. |
 | `docs/runbooks/vast_mvp_checklist.md` | Preflight/progress checklist for the VAST MVP run. | Run criteria, required artifacts, or post-run preservation changes. |
@@ -198,7 +199,7 @@ Every run must include:
 | `FixedResponseGeneratorProvider` | done, VAST Llama run passed | `scripts/rollouts/generate_fixed_responses.py` | Generate frozen responses for all 1040 rollout records using local Hugging Face model provider. |
 | `ActivationCacheRunner` | done, final checkpoint run passed | `scripts/activations/cache_rollout_activations.py` | Cache pooled residual activations. |
 | `CheckpointSweepRunner` | done, coarse and early dense passed | `scripts/analysis/run_checkpoint_sweep.py` | Run activation, inspection, AA, role geometry, and report stages over selected checkpoints. |
-| `GradientAttributionRunner` | todo | `scripts/analysis/score_training_sequence_gradients.py` | Score packed training sequences against local/final AA. |
+| `GradientAttributionRunner` | done, model-run external | `scripts/analysis/score_training_sequence_gradients.py` | Score packed training sequences against local/final AA. |
 | `GradientPressurePCAAnalyzer` | todo | `scripts/analysis/analyze_gradient_pressure_pca.py` | Test whether per-sequence update pressure is low-dimensional and AA-aligned. |
 | `GradientComponentInterventionRunner` | later | `scripts/analysis/run_gradient_component_intervention.py` | Neutralize/amplify/attenuate AA-aligned gradient components for causal validation. |
 | `SteeringRunner` | later | `scripts/steering/run_axis_steering.py` | Test checkpoint-local causal steering. |

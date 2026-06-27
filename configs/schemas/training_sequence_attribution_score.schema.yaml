@@ -1,0 +1,74 @@
+schema_version: 0.1
+schema_id: training_sequence_attribution_score
+description: >
+  Contract for one activation-gradient attribution score on a sampled packed
+  Pythia training sequence.
+
+required_fields:
+  sample_id:
+    type: string
+    description: Stable id copied from the sampled training sequence record.
+  window_id:
+    type: string
+    description: Attribution checkpoint window id.
+  uid:
+    type: string
+    description: Packed-sequence id from the Parquet stream.
+  batch_idx:
+    type: integer
+    description: Training batch/checkpoint-step index.
+  source_file:
+    type: string
+    description: Parquet shard file name.
+  model_id:
+    type: string
+    expected: EleutherAI/pythia-410m-deduped
+  checkpoint_revision:
+    type: string
+    description: Pythia checkpoint revision used for scoring.
+  layer:
+    type: integer
+    description: Layer index for the residual activation site.
+  hook_name:
+    type: string
+    description: Hidden-state site, matching activation-cache naming.
+  input_token_count:
+    type: integer
+    description: Number of input positions used for next-token prediction.
+  target_token_count:
+    type: integer
+    description: Number of next-token targets used for loss.
+  loss:
+    type: number
+    description: Per-sequence mean next-token cross entropy.
+  local_aa_score:
+    type: number
+    description: cosine(-mean_tokens(dL/dh), local Assistant Axis).
+  final_aa_score:
+    type: number_or_null
+    description: cosine(-mean_tokens(dL/dh), final Assistant Axis), if provided.
+  gradient_pooling:
+    type: string
+    expected: token_mean
+  sign_convention:
+    type: string
+    expected: positive_score_means_aa_amplifying_pressure
+  source:
+    type: object
+    description: Links to sample, axis, model, and run provenance.
+
+optional_fields:
+  gradient_pressure_path:
+    type: string
+    description: Optional tensor path for u_i = -mean_tokens(dL_i/dh_layer).
+
+validation_rules:
+  - input_token_count should usually be token_count - 1.
+  - target_token_count should equal input_token_count.
+  - local_aa_score must be finite.
+  - final_aa_score must be finite when final AA is provided.
+  - gradient_pressure_path must exist when present.
+
+notes:
+  - This is first-order activation-space pressure, not full parameter-update attribution.
+  - Strong causal claims require later intervention or continued-training validation.

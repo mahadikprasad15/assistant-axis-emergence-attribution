@@ -201,3 +201,29 @@ results/decode_summary.json
 ```
 
 This is still packed-sequence inspection, not raw-document reconstruction.
+
+The first activation-gradient attribution script is:
+
+```text
+scripts/analysis/score_training_sequence_gradients.py
+```
+
+It reads `sampled_sequences.jsonl`, loads a Pythia checkpoint and Assistant
+Axis vector, computes next-token loss on `token_ids[:-1] -> token_ids[1:]`,
+retains the gradient at the same hidden-state site used by activation caching,
+and writes:
+
+```text
+results/attribution_scores.jsonl
+results/attribution_scores.csv
+results/attribution_summary.json
+results/gradient_pressure_vectors/*.pt  # optional
+```
+
+The score is:
+
+```text
+cosine(-mean_tokens(dL/dh_layer), v_AA)
+```
+
+Positive scores mean first-order AA-amplifying pressure under gradient descent.
