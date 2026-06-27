@@ -358,6 +358,7 @@ def score_batch(
             "gradient_norm": gradient_norm,
             "update_pressure_norm": update_norm,
             "gradient_pooling": "token_mean",
+            "gradient_token_scope": "all_valid_training_input_tokens",
             "sign_convention": "positive_score_means_aa_amplifying_pressure",
             "source": {
                 "sample_source": sample.get("source", {}),
@@ -485,6 +486,7 @@ def write_manifest(
             "gradient": {
                 "object": "dL/dh_layer",
                 "pooling": "token_mean",
+                "token_scope": "all_valid_training_input_tokens",
                 "update_pressure": "-mean_tokens(dL/dh_layer)",
                 "score": "cosine(update_pressure, assistant_axis)",
                 "sign_convention": "positive_score_means_aa_amplifying_pressure",

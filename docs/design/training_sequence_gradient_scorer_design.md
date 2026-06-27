@@ -55,7 +55,7 @@ For each batch:
 5. Compute unreduced next-token cross entropy manually.
 6. Backprop the masked mean loss.
 7. Read `dL/dh_layer`.
-8. Pool the gradient over valid token positions.
+8. Pool the gradient over all valid training-token positions.
 9. Define update pressure:
 
 ```text
@@ -79,6 +79,31 @@ negative: sequence locally pushes away from the Assistant Axis
 
 This is an activation-space first-order diagnostic, not a claim that a sequence
 caused a particular final weight update.
+
+## Token Scope
+
+This is not response-token pooling.
+
+For fixed rollout activations, `response_token_mean` was necessary because we
+wanted to avoid measuring role-instruction/prompt tokens. For Pythia packed
+training data, there is no prompt/response boundary. The model is trained on
+every next-token target in the packed sequence.
+
+So Phase 6A pools over:
+
+```text
+all valid input positions in token_ids[:-1]
+```
+
+The corresponding targets are:
+
+```text
+token_ids[1:]
+```
+
+This is the principled training-data object. Later raw-document mapping could
+split packed sequences into document spans, but the first attribution unit is
+the packed training sequence as Pythia saw it.
 
 ## Output
 

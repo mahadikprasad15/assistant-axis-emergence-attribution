@@ -227,3 +227,13 @@ cosine(-mean_tokens(dL/dh_layer), v_AA)
 ```
 
 Positive scores mean first-order AA-amplifying pressure under gradient descent.
+
+The gradient pooling scope is:
+
+```text
+all valid training-token positions in token_ids[:-1]
+```
+
+not response tokens. Response-token pooling belongs to the fixed rollout
+activation pipeline; packed Pythia training sequences do not have a
+prompt/response boundary.

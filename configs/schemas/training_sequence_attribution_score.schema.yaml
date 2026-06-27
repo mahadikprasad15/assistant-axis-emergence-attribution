@@ -50,6 +50,12 @@ required_fields:
   gradient_pooling:
     type: string
     expected: token_mean
+  gradient_token_scope:
+    type: string
+    expected: all_valid_training_input_tokens
+    description: >
+      The pooled gradient covers all non-padding input positions in the packed
+      training sequence, not rollout response tokens.
   sign_convention:
     type: string
     expected: positive_score_means_aa_amplifying_pressure
@@ -68,7 +74,9 @@ validation_rules:
   - local_aa_score must be finite.
   - final_aa_score must be finite when final AA is provided.
   - gradient_pressure_path must exist when present.
+  - gradient_token_scope must be all_valid_training_input_tokens for packed training data.
 
 notes:
   - This is first-order activation-space pressure, not full parameter-update attribution.
+  - Response-token pooling is only used for fixed rollout activations, not for packed training-sequence gradients.
   - Strong causal claims require later intervention or continued-training validation.
