@@ -24,6 +24,8 @@ evenly or concentrated in a smaller post-1000 interval.
 - Trajectory run: `artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/dense-1000-5000-full-v1`
 - Plot run: `artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-plots-layer12/dense-1000-5000-full-v1`
 
+Artifact audit (2026-06-27): HF preserves the sweep summary, trajectory, and plots, but the original uploader omitted the per-checkpoint activation, AA vector, PC1 vector, and geometry sibling runs. The uploader also previously hardcoded the unused `full-v0` run id; it now targets the executed `full-v1` run.
+
 ## Checkpoint Metrics
 
 | checkpoint | AA vs step5000 | AA vs previous | PC1 vs step5000 | PC1 vs previous | AA-PC1 | PC1 EVR | AA loading corr vs step5000 |

@@ -22,6 +22,8 @@ Pythia-410M-deduped training?
 - Trajectory run: `artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/coarse8-full-v0`
 - Plot run: `artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-plots-layer12/coarse8-full-v0`
 
+Artifact audit (2026-06-27): HF preserves the sweep summary, trajectory, and plots. Except for the separately uploaded final checkpoint, the original uploader omitted per-checkpoint activation, AA vector, PC1 vector, and geometry sibling runs.
+
 ## Main Metrics
 
 | checkpoint | AA vs final | AA vs previous | PC1 vs final | PC1 vs previous | AA-PC1 | PC1 EVR |

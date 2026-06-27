@@ -23,6 +23,8 @@ effect, or does it happen later inside the first 1000 steps?
 - Trajectory run: `artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/early-dense-0-1000-full-v0`
 - Plot run: `artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-plots-layer12/early-dense-0-1000-full-v0`
 
+Artifact audit (2026-06-27): HF preserves the sweep summary, trajectory, and plots, but the original uploader omitted the per-checkpoint activation, AA vector, PC1 vector, and geometry sibling runs. Those tensors are not recoverable from the summary alone.
+
 ## Findings
 
 The large `step0 -> step1000` transition is not primarily an immediate

@@ -78,17 +78,17 @@ DEFAULT_ARTIFACTS: list[dict[str, Any]] = [
     },
     {
         "kind": "dense_1000_5000_checkpoint_sweep_run",
-        "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/checkpoint-sweep-layer12/dense-1000-5000-full-v0",
+        "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/checkpoint-sweep-layer12/dense-1000-5000-full-v1",
         "required": False,
     },
     {
         "kind": "dense_1000_5000_axis_trajectory_run",
-        "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/dense-1000-5000-full-v0",
+        "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/dense-1000-5000-full-v1",
         "required": False,
     },
     {
         "kind": "dense_1000_5000_axis_trajectory_plots_run",
-        "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-plots-layer12/dense-1000-5000-full-v0",
+        "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-plots-layer12/dense-1000-5000-full-v1",
         "required": False,
     },
 ]
@@ -124,10 +124,52 @@ def should_skip(path: Path) -> bool:
     return any(part in SKIP_PARTS for part in path.parts)
 
 
+def sweep_dependency_records(sweep_path: Path) -> list[dict[str, Any]]:
+    summary_path = sweep_path / "results" / "checkpoint_sweep_summary.json"
+    if not summary_path.exists():
+        return []
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    records: list[dict[str, Any]] = []
+    stage_keys = {
+        "activation_dir": "activation_run",
+        "aa_dir": "assistant_axis_run",
+        "role_dir": "role_geometry_run",
+        "report_dir": "geometry_report_run",
+    }
+    for checkpoint in summary.get("checkpoints", []):
+        revision = str(checkpoint.get("revision", "unknown"))
+        paths = checkpoint.get("paths", {})
+        for path_key, stage_name in stage_keys.items():
+            if paths.get(path_key):
+                records.append(
+                    {
+                        "kind": f"sweep_{revision}_{stage_name}",
+                        "path": str(paths[path_key]),
+                        "required": True,
+                        "discovered_from": str(summary_path),
+                    }
+                )
+    return records
+
+
+def expand_sweep_dependencies(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    expanded = list(records)
+    for item in records:
+        if "checkpoint_sweep_run" not in str(item["kind"]):
+            continue
+        sweep_path = Path(item["path"])
+        if sweep_path.exists():
+            expanded.extend(sweep_dependency_records(sweep_path))
+    deduplicated: dict[str, dict[str, Any]] = {}
+    for item in expanded:
+        deduplicated[str(Path(item["path"]))] = item
+    return list(deduplicated.values())
+
+
 def collect_artifacts(allow_missing: bool) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     missing_required: list[str] = []
-    for item in DEFAULT_ARTIFACTS:
+    for item in expand_sweep_dependencies(DEFAULT_ARTIFACTS):
         path = Path(item["path"])
         exists = path.exists()
         if item["required"] and not exists:
@@ -147,6 +189,33 @@ def collect_artifacts(allow_missing: bool) -> list[dict[str, Any]]:
         joined = "\n".join(f"- {path}" for path in missing_required)
         raise FileNotFoundError(f"missing required upload artifacts:\n{joined}")
     return records
+
+
+def expected_repo_files(prefix: str, local_path: Path) -> list[str]:
+    repo_path = path_in_repo(prefix, local_path)
+    if local_path.is_file():
+        return [repo_path]
+    return [
+        f"{repo_path}/{child.relative_to(local_path).as_posix()}"
+        for child in local_path.rglob("*")
+        if child.is_file() and not should_skip(child) and child.name != ".DS_Store"
+    ]
+
+
+def verify_remote_artifacts(args: argparse.Namespace, artifact_records: list[dict[str, Any]]) -> dict[str, Any]:
+    from huggingface_hub import HfApi
+
+    token = args.token or os.environ.get("HF_TOKEN")
+    remote_files = set(HfApi(token=token).list_repo_files(repo_id=args.repo_id, repo_type=args.repo_type))
+    expected: list[str] = []
+    for record in artifact_records:
+        if record["exists"]:
+            expected.extend(expected_repo_files(args.path_in_repo, Path(record["path"])))
+    missing = sorted(set(expected) - remote_files)
+    if missing:
+        preview = "\n".join(f"- {path}" for path in missing[:20])
+        raise RuntimeError(f"remote verification failed; {len(missing)} uploaded files are missing:\n{preview}")
+    return {"expected_file_count": len(set(expected)), "missing_file_count": 0, "verified": True}
 
 
 def path_in_repo(prefix: str, local_path: Path) -> str:
@@ -246,6 +315,7 @@ def main() -> int:
     try:
         artifact_records = collect_artifacts(args.allow_missing)
         uploaded = upload_artifacts(args, artifact_records)
+        remote_verification = None if args.dry_run else verify_remote_artifacts(args, artifact_records)
         total_bytes = sum(item["size_bytes"] for item in artifact_records if item["exists"])
         manifest = {
             "schema_version": "0.1",
@@ -260,6 +330,7 @@ def main() -> int:
             "artifact_count": len(artifact_records),
             "total_size_bytes": total_bytes,
             "artifacts": uploaded,
+            "remote_verification": remote_verification,
         }
         write_json(manifest_path, manifest)
         write_json(

@@ -154,14 +154,14 @@ Exit criteria:
 | --- | --- | --- | --- |
 | P5.1 | Define coarse checkpoint list. | done | `configs/experiments/pythia_410m_mvp_v0.yaml` defines the first `coarse_8` sweep. |
 | P5.2 | Build checkpoint sweep runner. | done | `scripts/analysis/run_checkpoint_sweep.py` orchestrates per-checkpoint activation, inspection, AA, role geometry, and report stages. |
-| P5.3 | Run activation extraction over selected checkpoints. | done | Coarse and early-dense VAST sweep artifacts uploaded to HF. |
-| P5.4 | Build AA and PC1 per checkpoint. | done | Coarse and early-dense AA/role-geometry artifacts uploaded to HF. |
+| P5.3 | Run activation extraction over selected checkpoints. | done | Coarse and early-dense sweeps ran successfully; audit found that only final-checkpoint activations, not sweep checkpoint activations, were uploaded to HF. |
+| P5.4 | Build AA and PC1 per checkpoint. | done | Per-checkpoint AA/PC1 artifacts were produced during the sweeps, but the original uploader omitted these sibling run directories; they must be regenerated or recovered where absent. |
 | P5.5 | Compute cosine-to-final, adjacent cosine, AA-PC1 alignment, PC1 variance, role-loading correlation, moving roles, and candidate transition windows. | done | `scripts/analysis/analyze_axis_trajectory.py` |
 | P5.6 | Run trajectory analyzer on completed sweep. | done | Coarse and early-dense trajectory artifacts uploaded to HF. |
 | P5.7 | Add plots for trajectory metrics. | done | `scripts/reporting/plot_axis_trajectory.py` |
 | P5.7A | Run trajectory plotter on completed trajectory artifacts. | done | Coarse and early-dense plot artifacts uploaded to HF; plot style improved afterward and should be regenerated. |
 | P5.8 | Select candidate emergence/refinement windows. | done | `docs/experiments/chosen_attribution_windows.md` |
-| P5.9 | Upload curated MVP artifacts to Hugging Face. | done | HF dataset `Prasadmahadik/assistant-axis-emergence-attribution` contains fixed responses, final checkpoint artifacts, sweeps, trajectories, and plots. |
+| P5.9 | Upload curated MVP artifacts to Hugging Face. | partial | HF contains fixed responses, final-checkpoint artifacts, sweep summaries, trajectories, and plots. A 2026-06-27 audit found that per-checkpoint activation, AA, PC1, and geometry sibling runs were omitted. The uploader now discovers these dependencies and verifies remote files; missing historical artifacts still require recovery/regeneration. |
 | P5.10 | Define 1000-to-5000 dense checkpoint sweep. | done | `configs/experiments/pythia_410m_dense_1000_5000_v0.yaml` |
 | P5.11 | Run 1000-to-5000 dense checkpoint sweep. | done | `dense-1000-5000-full-v1` sweep, trajectory, and plots; see `docs/experiments/dense_1000_5000_sweep.md`. |
 

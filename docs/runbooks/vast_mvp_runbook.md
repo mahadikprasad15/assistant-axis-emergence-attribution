@@ -436,8 +436,11 @@ The uploader creates the dataset repo if it does not already exist. It uploads t
 - Llama fixed-response generation run,
 - final-checkpoint activation, AA, role-geometry, and report runs,
 - coarse checkpoint sweep run,
+- every activation, Assistant Axis, role-geometry, and geometry-report run referenced by an included checkpoint sweep summary,
 - trajectory analysis run,
 - trajectory plot run.
+
+After uploading, the uploader lists the remote repository and fails unless every expected local file is present remotely. A sweep upload is therefore incomplete if its summary was uploaded but its referenced stage directories were not.
 
 It does not upload:
 
