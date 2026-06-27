@@ -1,4 +1,4 @@
-schema_version: 0.1
+schema_version: 0.2
 schema_id: training_sequence_attribution_score
 description: >
   Contract for one activation-gradient attribution score on a sampled packed
@@ -47,6 +47,15 @@ required_fields:
   final_aa_score:
     type: number_or_null
     description: cosine(-mean_tokens(dL/dh), final Assistant Axis), if provided.
+  primary_axis_name:
+    type: string
+    description: Explicit semantic name for the axis exposed through local_aa_score.
+  axis_scores:
+    type: object
+    description: Named sequence-level cosine scores for every supplied axis target.
+  token_axis_diagnostics:
+    type: object
+    description: Per-axis summary statistics over token-level update-pressure cosines.
   gradient_pooling:
     type: string
     expected: token_mean
@@ -67,6 +76,9 @@ optional_fields:
   gradient_pressure_path:
     type: string
     description: Optional tensor path for u_i = -mean_tokens(dL_i/dh_layer).
+  token_axis_scores_path:
+    type: string
+    description: Optional tensor artifact containing full token-level cosine arrays by named axis.
 
 validation_rules:
   - input_token_count should usually be token_count - 1.

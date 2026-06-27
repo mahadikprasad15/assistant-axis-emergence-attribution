@@ -181,6 +181,7 @@ Exit criteria:
 | P6.4 | Compute activation-gradient cosine scores against local and final AA. | done | `scripts/analysis/score_training_sequence_gradients.py`, `configs/schemas/training_sequence_attribution_score.schema.yaml`, `docs/design/training_sequence_gradient_scorer_design.md`; syntax/CLI verified, model-run external. |
 | P6.5 | Save optional per-sequence update-pressure vectors for structural analysis. | done | `scripts/analysis/score_training_sequence_gradients.py --save-gradient-vectors` |
 | P6.6 | Produce top/bottom sequence tables and score summaries. | todo | attribution report |
+| P6.6A | Add pre-scale gradient diagnostics. | done | Named native/endpoint/final targets, token-level cosine diagnostics and optional tensors, plus `compare_gradient_attribution_runs.py` for float32 agreement checks. |
 
 Exit criteria:
 

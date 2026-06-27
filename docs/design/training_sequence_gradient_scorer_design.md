@@ -19,6 +19,7 @@ The scorer consumes:
 sampled_sequences.jsonl
 assistant_axis_vector.pt
 optional final assistant_axis_vector.pt
+optional additional named axis vectors
 Pythia checkpoint revision
 ```
 
@@ -68,6 +69,10 @@ u_i = -mean_tokens(dL_i/dh_layer)
 local_aa_score = cosine(u_i, v_AA_local)
 final_aa_score = cosine(u_i, v_AA_final)
 ```
+
+The scorer also supports repeated `--axis-target NAME=PATH` arguments. Every target is written under `axis_scores`, avoiding ambiguous labels when an endpoint axis is used with a pre-window model checkpoint.
+
+For each named target it additionally computes token-level cosines before pooling and stores count, mean, standard deviation, quantiles, extrema, and positive fraction. `--save-token-axis-scores` persists the complete token arrays for later cancellation analysis.
 
 ## Interpretation
 
@@ -123,6 +128,7 @@ artifacts/runs/assistant_axis_attribution/
             results/attribution_scores.csv
             results/attribution_summary.json
             results/gradient_pressure_vectors/*.pt  # optional
+            results/gradient_pressure_vectors/*token_axis_scores.pt  # optional
             logs/run.log
 ```
 

@@ -136,6 +136,7 @@ docs/
 | `configs/schemas/generated_response_manifest.schema.yaml` | Defines fixed response import/generation manifest. | fixed response importer and future generator |
 | `configs/schemas/activation_record.schema.yaml` | Defines one activation index row and response-token span requirements. | future activation cache runner |
 | `configs/schemas/assistant_axis_vector.schema.yaml` | Defines one normalized Assistant Axis vector artifact. | assistant-axis builder |
+| `scripts/analysis/compare_gradient_attribution_runs.py` | Compares identical-sample attribution runs for numerical precision agreement. | gradient attribution diagnostics |
 | `configs/schemas/role_vector.schema.yaml` | Defines role/default mean vector artifacts. | role geometry builders |
 | `configs/schemas/geometry_manifest.schema.yaml` | Defines vector/geometry builder run manifests. | assistant-axis and role-geometry builders |
 | `configs/schemas/training_sequence_sample.schema.yaml` | Defines one sampled packed Pythia training sequence. | training-sequence sampler |

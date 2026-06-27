@@ -84,12 +84,21 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "gradient_norm",
         "update_pressure_norm",
         "gradient_pressure_path",
+        "token_axis_scores_path",
+        "axis_scores_json",
+        "token_axis_diagnostics_json",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(rows)
+        serialized = []
+        for row in rows:
+            output = dict(row)
+            output["axis_scores_json"] = json.dumps(row.get("axis_scores", {}), sort_keys=True)
+            output["token_axis_diagnostics_json"] = json.dumps(row.get("token_axis_diagnostics", {}), sort_keys=True)
+            serialized.append(output)
+        writer.writerows(serialized)
 
 
 def file_sha256(path: Path) -> str | None:
@@ -205,7 +214,12 @@ def load_axis_vector(axis_run_dir: Path | None, axis_vector_path: Path | None, r
     return vector, summary
 
 
-def load_completed_ids(index_path: Path, vectors_dir: Path, require_vectors: bool, selected_ids: set[str]) -> set[str]:
+def load_completed_ids(
+    index_path: Path,
+    require_vectors: bool,
+    require_token_scores: bool,
+    selected_ids: set[str],
+) -> set[str]:
     completed: set[str] = set()
     for row in load_jsonl(index_path):
         sample_id = str(row.get("sample_id"))
@@ -214,6 +228,10 @@ def load_completed_ids(index_path: Path, vectors_dir: Path, require_vectors: boo
         if require_vectors:
             vector_path = Path(str(row.get("gradient_pressure_path", "")))
             if not vector_path.exists():
+                continue
+        if require_token_scores:
+            token_scores_path = Path(str(row.get("token_axis_scores_path", "")))
+            if not token_scores_path.exists():
                 continue
         completed.add(sample_id)
     return completed
@@ -236,6 +254,29 @@ def safe_cosine(a: Any, b: Any) -> float:
     if not math.isfinite(score):
         raise ValueError("non-finite cosine score")
     return score
+
+
+def token_cosine_diagnostics(token_pressure: Any, axis: Any) -> tuple[dict[str, float | int], Any]:
+    import torch
+
+    scores = torch.nn.functional.cosine_similarity(token_pressure.float(), axis.float().unsqueeze(0), dim=1)
+    if not torch.isfinite(scores).all():
+        raise ValueError("non-finite token-level cosine score")
+    quantiles = torch.quantile(scores, torch.tensor([0.1, 0.5, 0.9], dtype=scores.dtype))
+    return (
+        {
+            "count": int(scores.numel()),
+            "mean": float(scores.mean().item()),
+            "std": float(scores.std(unbiased=True).item()) if scores.numel() > 1 else 0.0,
+            "min": float(scores.min().item()),
+            "p10": float(quantiles[0].item()),
+            "median": float(quantiles[1].item()),
+            "p90": float(quantiles[2].item()),
+            "max": float(scores.max().item()),
+            "positive_fraction": float((scores > 0).float().mean().item()),
+        },
+        scores,
+    )
 
 
 def prepare_batch(batch: list[dict[str, Any]], pad_token_id: int, max_input_tokens: int | None) -> dict[str, Any]:
@@ -282,8 +323,9 @@ def score_batch(
     args: argparse.Namespace,
     model: Any,
     tokenizer: Any,
-    local_axis: Any,
-    final_axis: Any | None,
+    axis_targets: dict[str, Any],
+    primary_axis_name: str,
+    final_axis_name: str | None,
     run_dir: Path,
     vectors_dir: Path,
 ) -> list[dict[str, Any]]:
@@ -321,25 +363,36 @@ def score_batch(
         raise RuntimeError("hidden-state gradient was not retained")
     grad = grad.detach().float().cpu()
     valid_mask_cpu = valid_mask.detach().cpu()
-    local_axis = local_axis.cpu()
-    final_axis = final_axis.cpu() if final_axis is not None else None
+    axis_targets = {name: axis.cpu() for name, axis in axis_targets.items()}
 
     records: list[dict[str, Any]] = []
     for row_idx, sample in enumerate(prepared["samples"]):
         mask = valid_mask_cpu[row_idx]
         pooled_grad = grad[row_idx, mask, :].mean(dim=0)
         update_pressure = -pooled_grad
+        token_pressure = -grad[row_idx, mask, :]
         gradient_norm = float(torch.linalg.vector_norm(pooled_grad).item())
         update_norm = float(torch.linalg.vector_norm(update_pressure).item())
-        local_score = safe_cosine(update_pressure, local_axis)
-        final_score = safe_cosine(update_pressure, final_axis) if final_axis is not None else None
+        axis_scores = {name: safe_cosine(update_pressure, axis) for name, axis in axis_targets.items()}
+        token_axis_diagnostics: dict[str, dict[str, float | int]] = {}
+        token_axis_scores: dict[str, Any] = {}
+        for name, axis in axis_targets.items():
+            diagnostics, token_scores = token_cosine_diagnostics(token_pressure, axis)
+            token_axis_diagnostics[name] = diagnostics
+            token_axis_scores[name] = token_scores
+        local_score = axis_scores[primary_axis_name]
+        final_score = axis_scores.get(final_axis_name) if final_axis_name else None
         sample_id = str(sample["sample_id"])
         vector_path: Path | None = None
         if args.save_gradient_vectors:
             vector_path = vectors_dir / f"{sanitize_id(sample_id)}__{sanitize_id(args.revision)}__layer{args.layer:02d}.pt"
             torch.save(update_pressure, vector_path)
+        token_axis_scores_path: Path | None = None
+        if args.save_token_axis_scores:
+            token_axis_scores_path = vectors_dir / f"{sanitize_id(sample_id)}__{sanitize_id(args.revision)}__layer{args.layer:02d}__token_axis_scores.pt"
+            torch.save(token_axis_scores, token_axis_scores_path)
         record = {
-            "schema_version": "0.1",
+            "schema_version": "0.2",
             "sample_id": sample_id,
             "window_id": str(sample["window_id"]),
             "uid": str(sample["uid"]),
@@ -355,6 +408,10 @@ def score_batch(
             "loss": float(per_sample_loss[row_idx].detach().cpu().item()),
             "local_aa_score": local_score,
             "final_aa_score": final_score,
+            "primary_axis_name": primary_axis_name,
+            "final_axis_name": final_axis_name,
+            "axis_scores": axis_scores,
+            "token_axis_diagnostics": token_axis_diagnostics,
             "gradient_norm": gradient_norm,
             "update_pressure_norm": update_norm,
             "gradient_pooling": "token_mean",
@@ -367,6 +424,8 @@ def score_batch(
         }
         if vector_path is not None:
             record["gradient_pressure_path"] = str(vector_path)
+        if token_axis_scores_path is not None:
+            record["token_axis_scores_path"] = str(token_axis_scores_path)
         records.append(record)
 
     del outputs, hidden, logits, losses, masked_losses, loss
@@ -422,18 +481,32 @@ def summarize_scores(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "std": math.sqrt(variance),
         }
 
+    axis_names = sorted({name for row in rows for name in row.get("axis_scores", {})})
     windows = {}
     for window_id, window_rows in sorted(by_window.items()):
         windows[window_id] = {
             "local_aa_score": stats([float(row["local_aa_score"]) for row in window_rows]),
             "final_aa_score": stats([float(row["final_aa_score"]) for row in window_rows if row["final_aa_score"] is not None]),
             "loss": stats([float(row["loss"]) for row in window_rows]),
+            "axis_scores": {
+                name: stats([float(row["axis_scores"][name]) for row in window_rows if name in row.get("axis_scores", {})])
+                for name in axis_names
+            },
+            "token_axis_cosine_means": {
+                name: stats([
+                    float(row["token_axis_diagnostics"][name]["mean"])
+                    for row in window_rows
+                    if name in row.get("token_axis_diagnostics", {})
+                ])
+                for name in axis_names
+            },
         }
     top_local = sorted(rows, key=lambda row: float(row["local_aa_score"]), reverse=True)[:20]
     bottom_local = sorted(rows, key=lambda row: float(row["local_aa_score"]))[:20]
     return {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "records": len(rows),
+        "axis_names": axis_names,
         "windows": windows,
         "top_local_aa": [
             {
@@ -463,6 +536,7 @@ def write_manifest(
     sample_jsonl: Path,
     local_axis_summary: dict[str, Any],
     final_axis_summary: dict[str, Any] | None,
+    axis_target_summaries: dict[str, dict[str, Any]],
     score_path: Path,
     completed_count: int,
     selected_count: int,
@@ -470,7 +544,7 @@ def write_manifest(
     write_json(
         path,
         {
-            "schema_version": "0.1",
+            "schema_version": "0.2",
             "runner": "TrainingSequenceGradientScorer",
             "created_at_utc": utc_now(),
             "run_dir": str(run_dir),
@@ -494,6 +568,7 @@ def write_manifest(
             "sample_jsonl": {"path": str(sample_jsonl), "sha256": file_sha256(sample_jsonl)},
             "local_axis": local_axis_summary,
             "final_axis": final_axis_summary,
+            "axis_targets": axis_target_summaries,
             "selection": {"limit": args.limit, "selected_count": selected_count, "completed_count": completed_count},
             "execution": {
                 "batch_size": args.batch_size,
@@ -502,6 +577,7 @@ def write_manifest(
                 "device_map": args.device_map,
                 "max_input_tokens": args.max_input_tokens,
                 "save_gradient_vectors": args.save_gradient_vectors,
+                "save_token_axis_scores": args.save_token_axis_scores,
                 "progress_enabled": not args.no_progress,
             },
             "results": {"attribution_scores_jsonl": str(score_path), "sha256": file_sha256(score_path)},
@@ -516,6 +592,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--local-axis-vector", type=Path, default=None)
     parser.add_argument("--final-axis-run-dir", type=Path, default=None)
     parser.add_argument("--final-axis-vector", type=Path, default=None)
+    parser.add_argument("--local-axis-name", default="local_aa")
+    parser.add_argument("--final-axis-name", default="final_aa")
+    parser.add_argument(
+        "--axis-target",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        help="Additional named axis target. Repeat for multiple targets.",
+    )
     parser.add_argument("--model-id", default="EleutherAI/pythia-410m-deduped")
     parser.add_argument("--revision", default="step512")
     parser.add_argument("--layer", type=int, default=12)
@@ -524,6 +609,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--save-every", type=int, default=25)
     parser.add_argument("--max-input-tokens", type=int, default=2048)
     parser.add_argument("--save-gradient-vectors", action="store_true")
+    parser.add_argument("--save-token-axis-scores", action="store_true")
     parser.add_argument("--hf-cache-dir", type=Path, default=None)
     parser.add_argument("--local-files-only", action="store_true")
     parser.add_argument("--torch-dtype", choices=["auto", "float16", "bfloat16", "float32"], default="auto")
@@ -551,6 +637,8 @@ def main() -> int:
         raise SystemExit("--save-every must be positive")
     if args.max_input_tokens is not None and args.max_input_tokens < 1:
         raise SystemExit("--max-input-tokens must be positive")
+    if not args.local_axis_name.strip():
+        raise SystemExit("--local-axis-name must be non-empty")
 
     repo_root = Path(".").resolve()
     sample_jsonl = resolve_path(args.sample_jsonl, repo_root)
@@ -571,7 +659,7 @@ def main() -> int:
 
     for directory in [inputs_dir, checkpoints_dir, results_dir, logs_dir, meta_dir]:
         directory.mkdir(parents=True, exist_ok=True)
-    if args.save_gradient_vectors:
+    if args.save_gradient_vectors or args.save_token_axis_scores:
         vectors_dir.mkdir(parents=True, exist_ok=True)
 
     if status_path.exists() and not args.force_completed:
@@ -588,7 +676,12 @@ def main() -> int:
     if len(selected_id_set) != len(selected_ids):
         raise SystemExit("sample records contain duplicate sample_id values")
 
-    completed_ids = load_completed_ids(score_path, vectors_dir, args.save_gradient_vectors, selected_id_set)
+    completed_ids = load_completed_ids(
+        score_path,
+        args.save_gradient_vectors,
+        args.save_token_axis_scores,
+        selected_id_set,
+    )
     if args.force_completed:
         completed_ids = set()
     write_status(status_path, "running", "gradient attribution scoring started", {"selected": len(selected_ids), "completed": len(completed_ids)})
@@ -601,10 +694,30 @@ def main() -> int:
     progress_bar = make_progress_bar(len(selected_ids), len(completed_ids), not args.no_progress)
     try:
         local_axis, local_axis_summary = load_axis_vector(args.local_axis_run_dir, args.local_axis_vector, repo_root)
-        final_axis = None
+        axis_targets = {args.local_axis_name: local_axis}
+        axis_target_summaries = {args.local_axis_name: local_axis_summary}
+        final_axis_name = None
         final_axis_summary = None
         if args.final_axis_run_dir is not None or args.final_axis_vector is not None:
             final_axis, final_axis_summary = load_axis_vector(args.final_axis_run_dir, args.final_axis_vector, repo_root)
+            final_axis_name = args.final_axis_name
+            if final_axis_name in axis_targets:
+                raise ValueError(f"duplicate axis target name: {final_axis_name}")
+            axis_targets[final_axis_name] = final_axis
+            axis_target_summaries[final_axis_name] = final_axis_summary
+        for target_spec in args.axis_target:
+            if "=" not in target_spec:
+                raise ValueError(f"--axis-target must use NAME=PATH: {target_spec}")
+            target_name, target_path_text = target_spec.split("=", 1)
+            target_name = target_name.strip()
+            if not target_name or target_name in axis_targets:
+                raise ValueError(f"invalid or duplicate axis target name: {target_name!r}")
+            target_axis, target_summary = load_axis_vector(None, Path(target_path_text), repo_root)
+            axis_targets[target_name] = target_axis
+            axis_target_summaries[target_name] = target_summary
+        axis_shapes = {tuple(axis.shape) for axis in axis_targets.values()}
+        if len(axis_shapes) != 1:
+            raise ValueError(f"axis targets have inconsistent shapes: {sorted(map(str, axis_shapes))}")
         model, tokenizer = load_model_and_tokenizer(args)
 
         pending_batch: list[dict[str, Any]] = []
@@ -615,7 +728,7 @@ def main() -> int:
             pending_batch.append(sample)
             if len(pending_batch) < args.batch_size:
                 continue
-            score_rows = score_batch(pending_batch, args, model, tokenizer, local_axis, final_axis, run_dir, vectors_dir)
+            score_rows = score_batch(pending_batch, args, model, tokenizer, axis_targets, args.local_axis_name, final_axis_name, run_dir, vectors_dir)
             for row in score_rows:
                 append_jsonl(score_path, row)
                 completed_ids.add(str(row["sample_id"]))
@@ -628,7 +741,7 @@ def main() -> int:
                 append_log(log_path, "progress", {"cursor": cursor, "completed": len(completed_ids)})
 
         if pending_batch:
-            score_rows = score_batch(pending_batch, args, model, tokenizer, local_axis, final_axis, run_dir, vectors_dir)
+            score_rows = score_batch(pending_batch, args, model, tokenizer, axis_targets, args.local_axis_name, final_axis_name, run_dir, vectors_dir)
             for row in score_rows:
                 append_jsonl(score_path, row)
                 completed_ids.add(str(row["sample_id"]))
@@ -644,6 +757,7 @@ def main() -> int:
         append_log(log_path, "error", {"error_type": type(exc).__name__, "message": str(exc)})
         local_axis_summary = locals().get("local_axis_summary", None)
         final_axis_summary = locals().get("final_axis_summary", None)
+        axis_target_summaries = locals().get("axis_target_summaries", {})
     finally:
         if progress_bar is not None:
             progress_bar.close()
@@ -672,6 +786,7 @@ def main() -> int:
         sample_jsonl,
         local_axis_summary or {},
         final_axis_summary,
+        axis_target_summaries,
         score_path,
         completed_count=len(completed_ids),
         selected_count=len(selected_ids),
