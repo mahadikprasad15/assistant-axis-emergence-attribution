@@ -66,7 +66,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Steering tests | Not started | Need hook implementation and prompt set. |
 | Gradient attribution | Implemented, not model-run verified | `scripts/analysis/score_training_sequence_gradients.py` scores packed sequences by `cos(-mean_tokens(dL/dh), v_AA)` and can save update-pressure vectors for PCA. |
 | Training-window planner | Implemented | `scripts/data/plan_training_window.py` maps selected checkpoint intervals to Parquet shard names and `batch_idx` filters. |
-| Training sequence sampler | Implemented, data-run external | `scripts/data/sample_training_sequences.py` consumes window plans and samples packed `token_ids` rows from HF/local Parquet shards. |
+| Training sequence sampler | Implemented, data-run external | `scripts/data/sample_training_sequences.py` consumes window plans and samples packed `token_ids` rows from HF/local Parquet shards; includes per-file progress/log events for large Parquet reads. |
 | Training sequence decoder | Implemented | `scripts/data/decode_training_sequences.py` consumes sampled `token_ids`, decodes Pythia text previews, and writes inspection artifacts before gradient scoring. |
 | Gradient-pressure PCA | Implemented, not artifact-run verified | `scripts/analysis/analyze_gradient_pressure_pca.py` computes global/per-window PCA over saved update-pressure vectors and compares PCs to local/final AA. |
 | Gradient-component interventions | Deferred | Neutralize/amplify/attenuate AA-aligned gradient components only after observational attribution and PCA are stable. |

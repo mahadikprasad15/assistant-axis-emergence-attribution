@@ -76,6 +76,27 @@ data/train-001000.parquet
 
 because the dataset config stores `data_dir: data`.
 
+The sampler prints progress at three levels:
+
+```text
+window -> Parquet file -> large read/filter completion
+```
+
+This matters because one planned window can still require reading a multi-GB
+Parquet shard. Hugging Face download progress can finish while the local
+`read_parquet` call is still working. The run log records:
+
+```text
+parquet_read_start
+parquet_read_done
+parquet_filter_read_fallback
+```
+
+The loader first tries Parquet predicate filters on `batch_idx` so pyarrow can
+avoid materializing unrelated rows when supported. If the installed Parquet
+engine rejects filters, the sampler logs the fallback and applies the same
+filter in pandas after loading the planned columns.
+
 ## Sampling Strategy
 
 For each window:

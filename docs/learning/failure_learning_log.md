@@ -19,6 +19,41 @@ Status:
 
 ## Activation and Generation Span Failures
 
+### FL-000: Large Parquet Reads Can Look Stuck After Download Progress Ends
+
+Category: observability / data loading / progress
+
+Component: `TrainingSequenceSampler`
+
+Symptom:
+
+- Hugging Face download progress reaches 100%, then the terminal appears idle.
+- For a one-window smoke run, the window-level progress bar does not update while pandas reads and filters a multi-GB Parquet shard.
+
+Root cause:
+
+- The original sampler only showed progress over windows.
+- A single window can still require a large `read_parquet` call, and pandas/pyarrow do not expose row-level progress during the read.
+
+Prevention:
+
+- Print per-file start/done progress messages around file resolution and Parquet loading.
+- Log `parquet_read_start`, `parquet_read_done`, and filter fallback events in `logs/run.log`.
+- Use Parquet predicate filters on `batch_idx` when supported, then fall back to pandas filtering only if needed.
+
+Checks to add:
+
+- For any future large-file loader, show progress at the unit that can take minutes, not only at the outer experiment loop.
+- Keep `--no-progress` available for non-interactive runs.
+
+Source/evidence:
+
+- VAST smoke run of `scripts/data/sample_training_sequences.py` for `step256_to_step512` appeared stuck after `data/train-001000.parquet` finished downloading.
+
+Status:
+
+- Implemented in `scripts/data/sample_training_sequences.py`.
+
 ### FL-001: Generation Padding Can Corrupt Completion Decoding
 
 Category: tokenization / padding / generation

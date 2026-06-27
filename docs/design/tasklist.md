@@ -175,7 +175,7 @@ Exit criteria:
 | --- | --- | --- | --- |
 | P6.0 | Write training-window planner design. | done | `docs/design/training_window_planner_design.md` |
 | P6.1 | Implement checkpoint-window to Parquet-file mapping. | done | `scripts/data/plan_training_window.py` |
-| P6.2 | Sample packed 2049-token sequences by `uid`/`batch_idx`. | done | `scripts/data/sample_training_sequences.py`, `configs/schemas/training_sequence_sample.schema.yaml`, `docs/design/training_sequence_sampler_design.md`; dry-run verified, real Parquet sampling runs externally. |
+| P6.2 | Sample packed 2049-token sequences by `uid`/`batch_idx`. | done | `scripts/data/sample_training_sequences.py`, `configs/schemas/training_sequence_sample.schema.yaml`, `docs/design/training_sequence_sampler_design.md`; dry-run verified, real Parquet sampling runs externally; sampler now logs per-file read/filter progress for multi-GB shards. |
 | P6.3 | Decode sample sequences for inspection. | done | `scripts/data/decode_training_sequences.py`, `configs/schemas/training_sequence_decoded_preview.schema.yaml`, `docs/design/training_sequence_decoder_design.md` |
 | P6.4 | Compute activation-gradient cosine scores against local and final AA. | done | `scripts/analysis/score_training_sequence_gradients.py`, `configs/schemas/training_sequence_attribution_score.schema.yaml`, `docs/design/training_sequence_gradient_scorer_design.md`; syntax/CLI verified, model-run external. |
 | P6.5 | Save optional per-sequence update-pressure vectors for structural analysis. | done | `scripts/analysis/score_training_sequence_gradients.py --save-gradient-vectors` |

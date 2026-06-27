@@ -6,6 +6,7 @@ import csv
 import json
 import random
 import secrets
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -95,6 +96,16 @@ def import_pandas() -> Any:
     return pd
 
 
+def import_tqdm(enabled: bool) -> Any | None:
+    if not enabled:
+        return None
+    try:
+        from tqdm.auto import tqdm
+    except ImportError:
+        return None
+    return tqdm
+
+
 def planned_sample_size(plan: dict[str, Any], override: int | None) -> int:
     if override is not None:
         return override
@@ -140,15 +151,97 @@ def normalize_token_ids(value: Any) -> list[int]:
     return [int(item) for item in value]
 
 
-def iter_candidate_rows(plan: dict[str, Any], args: argparse.Namespace) -> Iterable[dict[str, Any]]:
+def progress_print(enabled: bool, message: str) -> None:
+    if enabled:
+        print(message, flush=True)
+
+
+def read_filtered_parquet(
+    pd: Any,
+    path: Path,
+    start: int,
+    end: int,
+    log_path: Path,
+    parquet_file: str,
+) -> Any:
+    columns = ["uid", "batch_idx", "token_ids"]
+    filters = [("batch_idx", ">=", start), ("batch_idx", "<", end)]
+    try:
+        return pd.read_parquet(path, columns=columns, filters=filters)
+    except Exception as exc:
+        append_jsonl(
+            log_path,
+            {
+                "time_utc": utc_now(),
+                "event": "parquet_filter_read_fallback",
+                "parquet_file": parquet_file,
+                "error_type": type(exc).__name__,
+                "message": str(exc),
+            },
+        )
+        frame = pd.read_parquet(path, columns=columns)
+        return frame[(frame["batch_idx"] >= start) & (frame["batch_idx"] < end)]
+
+
+def iter_candidate_rows(
+    plan: dict[str, Any],
+    args: argparse.Namespace,
+    log_path: Path,
+    tqdm: Any | None,
+    progress_enabled: bool,
+) -> Iterable[dict[str, Any]]:
     pd = import_pandas()
     start = int(plan["row_filter"]["batch_idx_gte"])
     end = int(plan["row_filter"]["batch_idx_lt"])
-    for parquet_file in plan["parquet_files"]:
+    window_id = str(plan["window_id"])
+    parquet_files = [str(item) for item in plan["parquet_files"]]
+    file_iter = (
+        tqdm(parquet_files, desc=f"{window_id} parquet files", unit="file", leave=False)
+        if tqdm
+        else parquet_files
+    )
+    for parquet_file in file_iter:
+        progress_print(
+            progress_enabled,
+            f"[{window_id}] resolving/loading {parquet_file} for batch_idx [{start}, {end})",
+        )
+        read_started = time.perf_counter()
+        append_jsonl(
+            log_path,
+            {
+                "time_utc": utc_now(),
+                "event": "parquet_read_start",
+                "window_id": window_id,
+                "parquet_file": parquet_file,
+                "batch_idx_gte": start,
+                "batch_idx_lt": end,
+            },
+        )
         path = file_path_for_plan(plan, str(parquet_file), args)
-        frame = pd.read_parquet(path, columns=["uid", "batch_idx", "token_ids"])
-        frame = frame[(frame["batch_idx"] >= start) & (frame["batch_idx"] < end)]
-        for row in frame.itertuples(index=False):
+        frame = read_filtered_parquet(pd, path, start, end, log_path, parquet_file)
+        elapsed = time.perf_counter() - read_started
+        append_jsonl(
+            log_path,
+            {
+                "time_utc": utc_now(),
+                "event": "parquet_read_done",
+                "window_id": window_id,
+                "parquet_file": parquet_file,
+                "local_path": str(path),
+                "rows_after_filter": int(len(frame)),
+                "elapsed_seconds": round(elapsed, 3),
+            },
+        )
+        progress_print(
+            progress_enabled,
+            f"[{window_id}] loaded {parquet_file}: {len(frame)} candidate rows in {elapsed:.1f}s",
+        )
+        row_iter = (
+            tqdm(frame.itertuples(index=False), total=len(frame), desc=f"{parquet_file} rows", unit="row", leave=False)
+            if tqdm and len(frame) >= 1000
+            else frame.itertuples(index=False)
+        )
+        for row in row_iter:
             yield {
                 "uid": str(row.uid),
                 "batch_idx": int(row.batch_idx),
@@ -205,6 +298,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--local-data-dir", type=Path, default=None, help="Directory containing Parquet files, optionally nested under data/.")
     parser.add_argument("--hf-cache-dir", type=Path, default=None)
     parser.add_argument("--hf-token", default=None)
+    parser.add_argument("--no-progress", action="store_true", help="Disable tqdm bars and progress messages.")
     parser.add_argument("--dry-run", action="store_true", help="Plan and report required files without reading Parquet.")
     parser.add_argument("--force-completed", action="store_true")
     parser.add_argument("--output-root", type=Path, default=Path("artifacts/runs"))
@@ -252,10 +346,8 @@ def main() -> int:
     log_path = logs_dir / "run.log"
     append_jsonl(log_path, {"time_utc": utc_now(), "event": "start", "plans": len(plans), "dry_run": args.dry_run})
 
-    try:
-        from tqdm.auto import tqdm
-    except ImportError:
-        tqdm = None
+    progress_enabled = not args.no_progress
+    tqdm = import_tqdm(progress_enabled)
     iterator = tqdm(plans, desc="sample windows", unit="window") if tqdm else plans
 
     failed: dict[str, Any] | None = None
@@ -294,7 +386,7 @@ def main() -> int:
                 )
                 continue
 
-            candidates = list(iter_candidate_rows(plan, args))
+            candidates = list(iter_candidate_rows(plan, args, log_path, tqdm, progress_enabled))
             chosen = sample_rows(candidates, max(0, target - existing), planned_seed(plan, index))
             for row in chosen:
                 append_jsonl(samples_path, build_sample_record(row, plan, run_dir))
