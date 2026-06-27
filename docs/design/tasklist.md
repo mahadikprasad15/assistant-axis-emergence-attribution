@@ -178,12 +178,30 @@ Exit criteria:
 | P6.2 | Sample packed 2049-token sequences by `uid`/`batch_idx`. | done | `scripts/data/sample_training_sequences.py`, `configs/schemas/training_sequence_sample.schema.yaml`, `docs/design/training_sequence_sampler_design.md`; dry-run verified, real Parquet sampling runs externally. |
 | P6.3 | Decode sample sequences for inspection. | done | `scripts/data/decode_training_sequences.py`, `configs/schemas/training_sequence_decoded_preview.schema.yaml`, `docs/design/training_sequence_decoder_design.md` |
 | P6.4 | Compute activation-gradient cosine scores against local and final AA. | todo | `scripts/analysis/score_training_sequence_gradients.py` |
-| P6.5 | Produce top/bottom sequence tables and score summaries. | todo | attribution report |
+| P6.5 | Save optional per-sequence update-pressure vectors for structural analysis. | todo | gradient-pressure tensor/index artifacts |
+| P6.6 | Produce top/bottom sequence tables and score summaries. | todo | attribution report |
 
 Exit criteria:
 
 - Debug sample of 1,000 packed sequences can be scored and inspected.
 - Score sign convention is verified and documented in the manifest.
+- Optional saved gradient-pressure vectors are available for PCA without rerunning backward passes.
+
+## Phase 6B: Gradient-Pressure Structure and Attribution Extensions
+
+| ID | Task | Status | Output |
+| --- | --- | --- | --- |
+| P6B.1 | Document Shifting-the-Gradient-inspired extensions. | done | `docs/design/gradient_attribution_extensions_design.md` |
+| P6B.2 | Analyze PCA/SVD over per-sequence update-pressure vectors. | todo | `scripts/analysis/analyze_gradient_pressure_pca.py` |
+| P6B.3 | Compare PC1/top-k gradient-pressure directions with local and final AA. | todo | PCA summary/report |
+| P6B.4 | Build top/bottom/random sequence subset manifests for causal validation. | todo | subset manifests |
+| P6B.5 | Design gradient-component interventions: neutralize, amplify, attenuate AA component. | later | intervention design + runner stub |
+
+Exit criteria:
+
+- We know whether AA-aligned training pressure is low-dimensional.
+- We have ranked and control-matched sequence subsets ready for Phase 7.
+- Causal intervention scripts are not started until observational scores and PCA are stable.
 
 ## Phase 7: Steering and Causal Validation
 
@@ -191,8 +209,8 @@ Exit criteria:
 | --- | --- | --- | --- |
 | P7.1 | Build small steering prompt set. | later | config + JSONL |
 | P7.2 | Implement checkpoint-local AA steering. | later | `scripts/steering/run_axis_steering.py` |
-| P7.3 | Build top/bottom/random/keyword continued-pretraining subsets. | later | subset manifests |
-| P7.4 | Run tiny continued-pretraining validation. | later | validation run artifacts |
+| P7.3 | Run tiny continued-pretraining validation on Phase 6B subsets. | later | validation run artifacts |
+| P7.4 | Run gradient-component intervention variants if justified. | later | neutralize/amplify/attenuate artifacts |
 | P7.5 | Recompute geometry and behavior after validation runs. | later | comparison report |
 
 Exit criteria:

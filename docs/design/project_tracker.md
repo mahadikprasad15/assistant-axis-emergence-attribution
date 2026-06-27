@@ -68,6 +68,8 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Training-window planner | Implemented | `scripts/data/plan_training_window.py` maps selected checkpoint intervals to Parquet shard names and `batch_idx` filters. |
 | Training sequence sampler | Implemented, data-run external | `scripts/data/sample_training_sequences.py` consumes window plans and samples packed `token_ids` rows from HF/local Parquet shards. |
 | Training sequence decoder | Implemented | `scripts/data/decode_training_sequences.py` consumes sampled `token_ids`, decodes Pythia text previews, and writes inspection artifacts before gradient scoring. |
+| Gradient-pressure PCA | Planned | Shifting-style structural analysis over saved update-pressure vectors after the first scorer works. |
+| Gradient-component interventions | Deferred | Neutralize/amplify/attenuate AA-aligned gradient components only after observational attribution and PCA are stable. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
 
 ## Next Build Order
@@ -77,8 +79,9 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 3. Run `scripts/data/sample_training_sequences.py` on a tiny sample from one planned window.
 4. Run `scripts/data/decode_training_sequences.py` to inspect sampled packed sequences.
 5. Run activation-gradient attribution on a debug sample.
-6. Produce top/bottom sequence tables and source/mapping TODOs.
-7. Add tiny continued-pretraining validation only after the gradient scorer is stable.
+6. Run PCA/SVD over saved gradient-pressure vectors if the scorer artifacts look sane.
+7. Produce top/bottom sequence tables and source/mapping TODOs.
+8. Add tiny continued-pretraining or gradient-component validation only after the gradient scorer and PCA are stable.
 
 The detailed task queue lives in `docs/design/tasklist.md`; update it together with this tracker.
 
@@ -94,6 +97,7 @@ The detailed task queue lives in `docs/design/tasklist.md`; update it together w
 | `docs/design/activation_cache_runbook.md` | Activation smoke run and inspection procedure. | Activation commands, artifact paths, or proceed gates change. |
 | `docs/design/assistant_axis_builder_design.md` | AA vector math and artifact contract. | Axis variants, vector outputs, or selection rules change. |
 | `docs/design/geometry_report_design.md` | Final-checkpoint geometry sanity gate. | Gate criteria or report outputs change. |
+| `docs/design/gradient_attribution_extensions_design.md` | Shifting-style PCA and causal-extension plan. | Gradient-pressure PCA, intervention, or validation design changes. |
 | `docs/runbooks/vast_mvp_runbook.md` | End-to-end VAST commands for the first final-checkpoint report. | VAST setup, generator model, run ids, or artifact paths change. |
 | `docs/runbooks/vast_mvp_checklist.md` | Preflight/progress checklist for the VAST MVP run. | Run criteria, required artifacts, or post-run preservation changes. |
 | `docs/manifests/vast_mvp_upload_manifest_template.json` | Template for recording artifacts to preserve/upload after VAST. | Required artifacts or upload targets change. |
@@ -195,6 +199,8 @@ Every run must include:
 | `ActivationCacheRunner` | done, final checkpoint run passed | `scripts/activations/cache_rollout_activations.py` | Cache pooled residual activations. |
 | `CheckpointSweepRunner` | done, coarse and early dense passed | `scripts/analysis/run_checkpoint_sweep.py` | Run activation, inspection, AA, role geometry, and report stages over selected checkpoints. |
 | `GradientAttributionRunner` | todo | `scripts/analysis/score_training_sequence_gradients.py` | Score packed training sequences against local/final AA. |
+| `GradientPressurePCAAnalyzer` | todo | `scripts/analysis/analyze_gradient_pressure_pca.py` | Test whether per-sequence update pressure is low-dimensional and AA-aligned. |
+| `GradientComponentInterventionRunner` | later | `scripts/analysis/run_gradient_component_intervention.py` | Neutralize/amplify/attenuate AA-aligned gradient components for causal validation. |
 | `SteeringRunner` | later | `scripts/steering/run_axis_steering.py` | Test checkpoint-local causal steering. |
 
 ### Analyzers and Gates
@@ -204,11 +210,14 @@ Every run must include:
 | `TrajectoryAnalyzer` | done, coarse and early dense passed | `scripts/analysis/analyze_axis_trajectory.py` | Find stabilization or transition windows. |
 | `ActivationRunInspector` | done | `scripts/activations/inspect_activation_run.py` | Inspect activation run status, progress, index rows, tensor files, spans, and shapes. |
 | `TrainingWindowPlanner` | done | `scripts/data/plan_training_window.py` | Map checkpoint intervals to Parquet files and batch ranges. |
-| `TrainingSequenceSampler` | in_progress | `scripts/data/sample_training_sequences.py` | Sample packed token sequences from planned Parquet windows. |
+| `TrainingSequenceSampler` | done, data-run external | `scripts/data/sample_training_sequences.py` | Sample packed token sequences from planned Parquet windows. |
+| `TrainingSequenceDecoder` | done | `scripts/data/decode_training_sequences.py` | Decode sampled token ids for inspection before attribution scoring. |
+| `GradientPressurePCAAnalyzer` | todo | `scripts/analysis/analyze_gradient_pressure_pca.py` | Test whether per-sequence update pressure is low-dimensional and AA-aligned. |
 | `AttributionSummaryAnalyzer` | todo | `scripts/reporting/summarize_attribution.py` | Produce top/bottom tables and aggregate summaries. |
 | final-AA sanity gate | done | `docs/experiments/final_checkpoint_geometry_step143000.md` | Decide whether the axis is meaningful enough to sweep. |
 | checkpoint-transition gate | done for current evidence | `docs/experiments/chosen_attribution_windows.md` | Select attribution windows from geometry curves. |
 | attribution-debug gate | todo | decision record | Decide whether to scale from 1k to 10k sequences. |
+| gradient-structure gate | todo | PCA report and proceed/pivot note | Decide whether Shifting-style gradient interventions are worth implementing. |
 
 ## Claim Discipline
 

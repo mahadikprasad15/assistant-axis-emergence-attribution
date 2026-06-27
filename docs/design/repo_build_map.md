@@ -103,6 +103,15 @@ docs/
 `AttributionScore`
 : Per-sequence score containing loss, gradient metadata, `-cos(grad, v_aa_t)`, and `-cos(grad, v_aa_final)`.
 
+`GradientPressureVector`
+: The pooled update-pressure vector `u_i = -mean_tokens(dL_i/dh_layer)` for one packed sequence. This is optional to save during attribution scoring, but required for Shifting-style PCA.
+
+`GradientPressurePC`
+: Principal components over a matrix of `GradientPressureVector` records. Used to test whether AA-aligned training pressure is low-dimensional.
+
+`GradientComponentIntervention`
+: A later causal variant that decomposes activation gradients into AA-parallel and AA-orthogonal parts, then neutralizes, amplifies, or attenuates the AA-parallel component.
+
 `RunManifest`
 : Immutable run metadata: config paths and hashes, model/checkpoint, dataset files, layer/pooling policy, artifact paths, git commit if available, and timestamp.
 
@@ -245,6 +254,7 @@ Runners perform expensive or stateful work.
 | `TrainingSequenceSampler` | window plan, HF/local Parquet shards | sampled packed `token_ids` rows |
 | `TrainingSequenceDecoder` | sampled packed `token_ids` rows | decoded preview JSONL/CSV for inspection |
 | `GradientAttributionRunner` | training sequence sample, checkpoint, AA vector | attribution scores |
+| `GradientComponentInterventionRunner` | scored sequences, model checkpoint, AA vector | neutralize/amplify/attenuate intervention artifacts |
 | `SteeringRunner` | prompts, model checkpoint, AA vector, alpha schedule | steered completions |
 
 Runner rules:
@@ -317,6 +327,7 @@ Analyzers compute metrics from existing artifacts.
 | `RolloutInspector` | rollout JSONL and manifest | terminal counts and sample records |
 | `ActivationRunInspector` | activation run directory | status/progress/index/tensor/span summary |
 | `TrainingSequenceDecoder` | sampled training sequences | text previews, EOS/EOD counts, tokenizer metadata |
+| `GradientPressurePCAAnalyzer` | saved update-pressure vectors plus AA vector | PC explained variance, PC-AA cosines, low-dimensionality report |
 | `RoleLoadingAnalyzer` | role vectors and AA/PC1 | role loading tables |
 | `AttributionSummaryAnalyzer` | scored training sequences | top/bottom tables and aggregate summaries |
 | `GeometryReportBuilder` | AA summary plus role geometry summary/loadings | sanity report and proceed/caution/stop gate |
@@ -344,6 +355,7 @@ Gates create explicit proceed/pivot decisions.
 | final-AA sanity gate | Does final AA align with role PC1 enough to continue? | `docs/experiments/final_checkpoint_geometry_step143000.md` |
 | checkpoint-transition gate | Which windows are worth attribution? | `docs/experiments/chosen_attribution_windows.md`, `docs/experiments/dense_1000_5000_sweep.md` |
 | attribution-debug gate | Are gradient scores stable and interpretable enough for 10k samples? | proceed/pivot note |
+| gradient-structure gate | Is AA-aligned pressure low-dimensional enough to justify intervention experiments? | PCA report and proceed/pivot note |
 | causal-validation gate | Is continued-pretraining worth the compute? | go/no-go decision |
 
 ## Logging and Artifact Contract
@@ -386,8 +398,12 @@ flowchart TD
   P --> Q["GradientAttributionRunner"]
   J --> Q
   Q --> R["attribution scores"]
+  Q --> V["gradient-pressure vectors"]
+  V --> W["GradientPressurePCAAnalyzer"]
   R --> S["AttributionSummaryAnalyzer"]
-  S --> T["report + decision gate"]
+  W --> T["structure gate"]
+  S --> X["top/bottom/control subsets"]
+  X --> Y["causal validation"]
 ```
 
 ## Improvements Over The Reference Project
