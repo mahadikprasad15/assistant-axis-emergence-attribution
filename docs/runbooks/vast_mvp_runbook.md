@@ -374,6 +374,37 @@ Create the dense plot pack:
   --run-id early-dense-0-1000-full-v0
 ```
 
+## Dense 1000-5000 Sweep
+
+The coarse trajectory also shows substantial continued alignment from
+`step1000 -> step5000`. To resolve that second large early transition, run:
+
+```bash
+.venv/bin/python scripts/analysis/run_checkpoint_sweep.py \
+  --experiment-config configs/experiments/pythia_410m_dense_1000_5000_v0.yaml \
+  --response-jsonl data/rollouts/assistant_axis_rollouts_v0_responses.jsonl \
+  --hf-cache-dir .cache/huggingface \
+  --activation-batch-size 8 \
+  --sweep-run-id dense-1000-5000-full-v0
+```
+
+Analyze the dense trajectory using `step5000` as the local endpoint:
+
+```bash
+.venv/bin/python scripts/analysis/analyze_axis_trajectory.py \
+  --sweep-summary artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/checkpoint-sweep-layer12/dense-1000-5000-full-v0/results/checkpoint_sweep_summary.json \
+  --final-revision step5000 \
+  --run-id dense-1000-5000-full-v0
+```
+
+Create the dense plot pack:
+
+```bash
+.venv/bin/python scripts/reporting/plot_axis_trajectory.py \
+  --trajectory-run-dir artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/dense-1000-5000-full-v0 \
+  --run-id dense-1000-5000-full-v0
+```
+
 ## Upload Artifacts To Hugging Face
 
 Use `HF_TOKEN`; do not use `huggingface-cli login` on VAST.

@@ -76,6 +76,21 @@ DEFAULT_ARTIFACTS: list[dict[str, Any]] = [
         "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-plots-layer12/early-dense-0-1000-full-v0",
         "required": False,
     },
+    {
+        "kind": "dense_1000_5000_checkpoint_sweep_run",
+        "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/checkpoint-sweep-layer12/dense-1000-5000-full-v0",
+        "required": False,
+    },
+    {
+        "kind": "dense_1000_5000_axis_trajectory_run",
+        "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-layer12/dense-1000-5000-full-v0",
+        "required": False,
+    },
+    {
+        "kind": "dense_1000_5000_axis_trajectory_plots_run",
+        "path": "artifacts/runs/assistant_axis_attribution/pythia-410m-deduped/fixed-aa-rollouts-v0/assistant-axis-rollouts-v0/axis-trajectory-plots-layer12/dense-1000-5000-full-v0",
+        "required": False,
+    },
 ]
 
 SKIP_PARTS = {".cache", ".venv", "__pycache__"}

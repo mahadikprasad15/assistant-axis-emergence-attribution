@@ -100,10 +100,10 @@ total = 1040 fixed rollout records
 | P2.6 | Define generated response record and manifest schemas. | done | `configs/schemas/generated_response_record.schema.yaml`, `configs/schemas/generated_response_manifest.schema.yaml` |
 | P2.7 | Build fixed-response importer/validator. | done | `scripts/rollouts/import_fixed_responses.py`, `docs/design/fixed_response_import_design.md` |
 | P2.8 | Create and validate tiny fixed-response fixture. | done | `data/rollouts/fixtures/fixed_responses_tiny_validated.jsonl`, `data/rollouts/fixtures/fixed_responses_tiny_manifest.json` |
-| P2.9 | Generate or import fixed responses for all rollout records. | todo | `data/rollouts/assistant_axis_rollouts_v0_responses.jsonl`, manifest |
+| P2.9 | Generate or import fixed responses for all rollout records. | done | Role-faithful Llama run generated 1040 responses and importer wrote `data/rollouts/assistant_axis_rollouts_v0_responses.jsonl` plus manifest. |
 | P2.10 | Build resumable fixed-response generator harness with smoke provider. | done | `scripts/rollouts/generate_fixed_responses.py`, `docs/design/fixed_response_generator_design.md`, `artifacts/runs/.../smoke-template-fixture/` |
 | P2.11 | Add real local Hugging Face model provider for Llama fixed-response generation. | done | `scripts/rollouts/generate_fixed_responses.py --provider hf_local --hf-model-id meta-llama/Llama-3.2-1B-Instruct`; syntax verified, not model-run yet. |
-| P2.12 | Run Llama fixed-response generation for the full 1040 rollout corpus. | todo | Run on VAST with HF auth; local run was skipped because `meta-llama/Llama-3.2-1B-Instruct` is gated and local HF auth is unavailable. |
+| P2.12 | Run Llama fixed-response generation for the full 1040 rollout corpus. | done | VAST run used `meta-llama/Llama-3.2-1B-Instruct` role-faithful generation. |
 | P2.13 | Persist reproducible model runtime requirements. | done | `requirements-model.txt`, `.venv` preflight passed. |
 | P2.14 | Validate ungated Qwen fixed-response fallback. | done | `Qwen/Qwen2.5-0.5B-Instruct`; 12-record stratified smoke generated and imported successfully. |
 | P2.15 | Run Qwen fixed-response generation for the full 1040 rollout corpus. | later | Fallback only if VAST Llama access fails. |
@@ -120,11 +120,11 @@ Exit criteria:
 
 | ID | Task | Status | Output |
 | --- | --- | --- | --- |
-| P3.1 | Implement activation extraction for one checkpoint, one layer, response-token mean pooling. | in_progress | `scripts/activations/cache_rollout_activations.py` implemented and syntax verified; needs model-run smoke after fixed responses exist. |
+| P3.1 | Implement activation extraction for one checkpoint, one layer, response-token mean pooling. | done | `scripts/activations/cache_rollout_activations.py` ran successfully for final, coarse, and early-dense checkpoint sweeps. |
 | P3.1A | Add span/padding/empty-response/resume safeguards from failure log to activation runner design before coding. | done | `docs/design/activation_cache_runner_design.md` |
-| P3.2 | Save activations with index, tensor shape metadata, run manifest, status, and progress. | in_progress | Implemented in `scripts/activations/cache_rollout_activations.py`; not yet model-run verified. |
-| P3.3 | Add resume/skip behavior by rollout id and checkpoint. | in_progress | Implemented by reading activation index rows and checking tensor file existence; not yet model-run verified. |
-| P3.4 | Run a tiny local smoke test if dependencies are available. | todo | Runtime now passes in `.venv`; run after fixed responses exist. |
+| P3.2 | Save activations with index, tensor shape metadata, run manifest, status, and progress. | done | Verified by activation inspector on VAST artifacts. |
+| P3.3 | Add resume/skip behavior by rollout id and checkpoint. | done | Verified during checkpoint sweeps; completed stage outputs are reused. |
+| P3.4 | Run a tiny local smoke test if dependencies are available. | done | Superseded by full VAST activation runs. |
 | P3.5 | Add activation run inspector and smoke runbook. | done | `scripts/activations/inspect_activation_run.py`, `docs/design/activation_cache_runbook.md` |
 
 Exit criteria:
@@ -136,10 +136,10 @@ Exit criteria:
 
 | ID | Task | Status | Output |
 | --- | --- | --- | --- |
-| P4.1 | Build final-checkpoint Assistant Axis from default-vs-role means. | todo | `scripts/analysis/build_assistant_axis.py` |
+| P4.1 | Build final-checkpoint Assistant Axis from default-vs-role means. | done | `scripts/analysis/build_assistant_axis.py`; final `step143000` run completed. |
 | P4.1A | Define Assistant Axis vector schemas and builder design. | done | `configs/schemas/assistant_axis_vector.schema.yaml`, `configs/schemas/role_vector.schema.yaml`, `configs/schemas/geometry_manifest.schema.yaml`, `docs/design/assistant_axis_builder_design.md` |
-| P4.1B | Implement first Assistant Axis builder. | done | `scripts/analysis/build_assistant_axis.py`; syntax verified, needs activation-run input. |
-| P4.2 | Build role vectors and PC1 for one checkpoint. | done | `scripts/analysis/build_role_geometry.py`; syntax verified, needs activation and AA run inputs. |
+| P4.1B | Implement first Assistant Axis builder. | done | `scripts/analysis/build_assistant_axis.py`; final and sweep runs completed. |
+| P4.2 | Build role vectors and PC1 for one checkpoint. | done | `scripts/analysis/build_role_geometry.py`; final and sweep runs completed. |
 | P4.3 | Compute AA-PC1 alignment and role loadings. | done | Implemented in `scripts/analysis/build_role_geometry.py`; writes `role_geometry_summary.json`, `role_pc1.pt`, and `role_loadings.csv`. |
 | P4.4 | Add plot/report builder for final-checkpoint sanity checks. | done | `scripts/reporting/report_geometry.py`, `docs/design/geometry_report_design.md`; syntax verified, needs AA + role geometry run inputs. |
 
@@ -154,14 +154,16 @@ Exit criteria:
 | --- | --- | --- | --- |
 | P5.1 | Define coarse checkpoint list. | done | `configs/experiments/pythia_410m_mvp_v0.yaml` defines the first `coarse_8` sweep. |
 | P5.2 | Build checkpoint sweep runner. | done | `scripts/analysis/run_checkpoint_sweep.py` orchestrates per-checkpoint activation, inspection, AA, role geometry, and report stages. |
-| P5.3 | Run activation extraction over selected checkpoints. | todo | checkpoint activation artifacts |
-| P5.4 | Build AA and PC1 per checkpoint. | todo | vector/geometry artifacts |
+| P5.3 | Run activation extraction over selected checkpoints. | done | Coarse and early-dense VAST sweep artifacts uploaded to HF. |
+| P5.4 | Build AA and PC1 per checkpoint. | done | Coarse and early-dense AA/role-geometry artifacts uploaded to HF. |
 | P5.5 | Compute cosine-to-final, adjacent cosine, AA-PC1 alignment, PC1 variance, role-loading correlation, moving roles, and candidate transition windows. | done | `scripts/analysis/analyze_axis_trajectory.py` |
-| P5.6 | Run trajectory analyzer on completed sweep. | todo | `axis_trajectory.csv`, `checkpoint_transitions.csv`, `trajectory_report.md` |
+| P5.6 | Run trajectory analyzer on completed sweep. | done | Coarse and early-dense trajectory artifacts uploaded to HF. |
 | P5.7 | Add plots for trajectory metrics. | done | `scripts/reporting/plot_axis_trajectory.py` |
-| P5.7A | Run trajectory plotter on completed trajectory artifacts. | todo | cosine, geometry-quality, loading-correlation, transition-score, and moving-role PNGs |
-| P5.8 | Select candidate emergence/refinement windows. | todo | decision record |
-| P5.9 | Upload curated MVP artifacts to Hugging Face. | todo | private HF dataset repo containing fixed responses, final checkpoint artifacts, sweep, trajectory, and plots |
+| P5.7A | Run trajectory plotter on completed trajectory artifacts. | done | Coarse and early-dense plot artifacts uploaded to HF; plot style improved afterward and should be regenerated. |
+| P5.8 | Select candidate emergence/refinement windows. | done | `docs/experiments/chosen_attribution_windows.md` |
+| P5.9 | Upload curated MVP artifacts to Hugging Face. | done | HF dataset `Prasadmahadik/assistant-axis-emergence-attribution` contains fixed responses, final checkpoint artifacts, sweeps, trajectories, and plots. |
+| P5.10 | Define 1000-to-5000 dense checkpoint sweep. | done | `configs/experiments/pythia_410m_dense_1000_5000_v0.yaml` |
+| P5.11 | Run 1000-to-5000 dense checkpoint sweep. | todo | `dense-1000-5000-full-v0` sweep, trajectory, and plots |
 
 Exit criteria:
 

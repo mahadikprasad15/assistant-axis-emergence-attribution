@@ -48,38 +48,33 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Model runtime preflight | Done in `.venv` | `.venv/bin/python scripts/system/check_model_runtime.py` passes with torch 2.12.1, transformers 5.12.1, and accelerate 1.14.0. Active global miniforge Python remains broken; use `.venv`. |
 | Llama fixed response provider | Ready for VAST | `meta-llama/Llama-3.2-1B-Instruct` is gated and local HF auth is unavailable; run on VAST after `huggingface-cli login`. |
 | Qwen fixed response provider | Smoke passed | `Qwen/Qwen2.5-0.5B-Instruct` is ungated, Apache-2.0, instruction-tuned, and works through `hf_local`. A 12-record stratified smoke generated and imported successfully. |
-| Fixed generated responses | Ready to run on VAST | Full 1040-record Llama response corpus should be generated next and imported with `--mode full`; Qwen remains fallback. |
+| Fixed generated responses | Done | Full 1040-record role-faithful Llama response corpus was generated on VAST and imported with `--mode full`; Qwen remains fallback. |
 | VAST MVP runbook | Done | `docs/runbooks/vast_mvp_runbook.md`, `docs/runbooks/vast_mvp_checklist.md`, and `docs/manifests/vast_mvp_upload_manifest_template.json` define the first final-checkpoint report run. |
-| Activation extraction | Implemented, waiting on responses | `scripts/activations/cache_rollout_activations.py` implements response-token mean pooling for Pythia checkpoints; run after fixed responses exist. |
+| Activation extraction | Done | `scripts/activations/cache_rollout_activations.py` produced complete activation artifacts for final, coarse, and early-dense sweep checkpoints. |
 | Activation run inspector | Done | `scripts/activations/inspect_activation_run.py` audits status/progress/index rows, tensor file existence, response spans, and shape metadata. |
 | Activation cache runbook | Done | `docs/design/activation_cache_runbook.md` records the response generation, import, activation smoke, and inspection commands. |
 | AA vector schemas/design | Done | Assistant-axis vector, role-vector, and geometry-manifest schemas exist; `docs/design/assistant_axis_builder_design.md` explains the math and artifact contract. |
-| AA construction | Implemented, waiting on activations | `scripts/analysis/build_assistant_axis.py` builds `default_mean`, `contrast_mean`, and normalized AA vector from an activation run. Needs real activation artifacts to execute. |
+| AA construction | Done | `scripts/analysis/build_assistant_axis.py` built final, coarse, and early-dense AA vectors. |
 | Role geometry design | Done | `docs/design/role_geometry_builder_design.md` explains role/default means, PC1, loadings, and AA-PC1 alignment. |
-| Role geometry builder | Implemented, waiting on activations | `scripts/analysis/build_role_geometry.py` builds role/default mean vectors, PC1, loadings CSV, and geometry summary from activation + AA runs. |
-| Geometry sanity report | Implemented, waiting on geometry artifacts | `scripts/reporting/report_geometry.py` reads AA and role-geometry runs and writes `geometry_report.md`, `geometry_metrics.json`, and a proceed/caution/stop gate. |
-| Checkpoint sweep | Runner implemented, ready to run | `scripts/analysis/run_checkpoint_sweep.py` orchestrates activation, inspection, AA, role geometry, and report over the config's coarse 8 checkpoints. Run after the final-checkpoint geometry report is defensible. |
-| Axis trajectory analyzer | Implemented, waiting on sweep artifacts | `scripts/analysis/analyze_axis_trajectory.py` computes cosine-to-final, adjacent cosine, AA-PC1, PC1 EVR, loading correlations, moving roles, and candidate transition windows. |
-| Axis trajectory plots | Implemented, waiting on trajectory artifacts | `scripts/reporting/plot_axis_trajectory.py` writes cosine, geometry-quality, loading-correlation, transition-score, and moving-role plots. |
-| HF artifact upload | Implemented, waiting on VAST artifacts | `scripts/reporting/upload_artifacts_to_hf.py` uploads the curated MVP artifact set to a private HF dataset repo using `HF_TOKEN`. |
+| Role geometry builder | Done | `scripts/analysis/build_role_geometry.py` built final, coarse, and early-dense PC1/loadings artifacts. |
+| Geometry sanity report | Done | Final checkpoint report produced `gate: proceed` with AA-PC1 cosine about `0.9226`. |
+| Checkpoint sweep | Done for coarse and early dense; 1000-to-5000 pending | `scripts/analysis/run_checkpoint_sweep.py` ran coarse 8 and early dense 0-1000 sweeps. Next sweep config is `configs/experiments/pythia_410m_dense_1000_5000_v0.yaml`. |
+| Axis trajectory analyzer | Done for coarse and early dense | `scripts/analysis/analyze_axis_trajectory.py` produced uploaded trajectory artifacts for coarse and early dense runs. |
+| Axis trajectory plots | Done, style improved | `scripts/reporting/plot_axis_trajectory.py` writes trajectory plots; rerun plot packs after style update. |
+| HF artifact upload | Done for MVP artifacts | `scripts/reporting/upload_artifacts_to_hf.py` uploaded curated artifacts to `Prasadmahadik/assistant-axis-emergence-attribution`. |
 | Steering tests | Not started | Need hook implementation and prompt set. |
 | Gradient attribution | Not started | Need Parquet loader, sampler, gradient scorer, and resumable run state. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
 
 ## Next Build Order
 
-1. Run the VAST MVP runbook with Llama fixed responses.
-2. Import the generated response JSONL with `--mode full` to create `data/rollouts/assistant_axis_rollouts_v0_responses.jsonl`.
-3. Run Pythia final-checkpoint activation caching for `step143000`, layer 12.
-4. Inspect the activation run with `scripts/activations/inspect_activation_run.py`.
-5. Build final-checkpoint AA and role PC1.
-6. Build the geometry report and read the proceed/caution/stop gate.
-7. If the report is defensible, run `scripts/analysis/run_checkpoint_sweep.py`.
-8. Densify around candidate emergence/refinement windows.
-9. Implement Pythia Parquet stream loader with explicit checkpoint-window mapping.
-10. Run activation-gradient attribution on a debug sample.
-11. Produce top/bottom sequence tables and source/mapping TODOs.
-12. Add tiny continued-pretraining validation only after the gradient scorer is stable.
+1. Regenerate improved coarse and early-dense plots from HF/Colab artifacts and upload them.
+2. Run the `step1000 -> step5000` dense sweep from `configs/experiments/pythia_410m_dense_1000_5000_v0.yaml`.
+3. Analyze and plot the 1000-to-5000 dense trajectory.
+4. Implement Pythia Parquet stream loader with explicit checkpoint-window mapping.
+5. Run activation-gradient attribution on a debug sample.
+6. Produce top/bottom sequence tables and source/mapping TODOs.
+7. Add tiny continued-pretraining validation only after the gradient scorer is stable.
 
 The detailed task queue lives in `docs/design/tasklist.md`; update it together with this tracker.
 
@@ -109,6 +104,7 @@ The detailed task queue lives in `docs/design/tasklist.md`; update it together w
 | Pooling | Response-token mean | Avoids role-instruction contamination. |
 | Coarse checkpoints | 8 checkpoints | First pass uses `step0`, `step1000`, `step5000`, `step10000`, `step20000`, `step40000`, `step80000`, and `step143000`. |
 | Early dense checkpoints | 12 checkpoints | Follow-up sweep localizes the large `step0 -> step1000` transition with `step0`, `step1`, `step2`, `step4`, `step8`, `step16`, `step32`, `step64`, `step128`, `step256`, `step512`, and `step1000`. |
+| 1000-to-5000 dense checkpoints | 5 checkpoints | Follow-up sweep resolves the substantial `step1000 -> step5000` transition with `step1000`, `step2000`, `step3000`, `step4000`, and `step5000`. |
 | First attribution sample | 1,000 sequences/window | Debug before 10k+ runs. |
 | Raw-source mapping | Deferred | Packed-sequence attribution is the honest first unit. |
 | Role count | 48 | Need enough role-space structure for PC1 and contrast; split into 16 assistant-like, 16 non-assistant/non-neutral, 16 neutral/control. |
@@ -193,7 +189,7 @@ Every run must include:
 | --- | --- | --- | --- |
 | `FixedResponseGeneratorProvider` | done, VAST Llama run passed | `scripts/rollouts/generate_fixed_responses.py` | Generate frozen responses for all 1040 rollout records using local Hugging Face model provider. |
 | `ActivationCacheRunner` | done, final checkpoint run passed | `scripts/activations/cache_rollout_activations.py` | Cache pooled residual activations. |
-| `CheckpointSweepRunner` | done, ready to run | `scripts/analysis/run_checkpoint_sweep.py` | Run activation, inspection, AA, role geometry, and report stages over selected checkpoints. |
+| `CheckpointSweepRunner` | done, coarse and early dense passed | `scripts/analysis/run_checkpoint_sweep.py` | Run activation, inspection, AA, role geometry, and report stages over selected checkpoints. |
 | `GradientAttributionRunner` | todo | `scripts/analysis/score_training_sequence_gradients.py` | Score packed training sequences against local/final AA. |
 | `SteeringRunner` | later | `scripts/steering/run_axis_steering.py` | Test checkpoint-local causal steering. |
 
@@ -201,12 +197,12 @@ Every run must include:
 
 | Component | Status | Planned Script | Purpose |
 | --- | --- | --- | --- |
-| `TrajectoryAnalyzer` | done, waiting on sweep artifacts | `scripts/analysis/analyze_axis_trajectory.py` | Find stabilization or transition windows. |
+| `TrajectoryAnalyzer` | done, coarse and early dense passed | `scripts/analysis/analyze_axis_trajectory.py` | Find stabilization or transition windows. |
 | `ActivationRunInspector` | done | `scripts/activations/inspect_activation_run.py` | Inspect activation run status, progress, index rows, tensor files, spans, and shapes. |
 | `TrainingWindowPlanner` | todo | `scripts/data/plan_training_window.py` | Map checkpoint intervals to Parquet files and batch ranges. |
 | `AttributionSummaryAnalyzer` | todo | `scripts/reporting/summarize_attribution.py` | Produce top/bottom tables and aggregate summaries. |
-| final-AA sanity gate | todo | decision record | Decide whether the axis is meaningful enough to sweep. |
-| checkpoint-transition gate | todo | decision record | Select attribution windows from geometry curves. |
+| final-AA sanity gate | done | `docs/experiments/final_checkpoint_geometry_step143000.md` | Decide whether the axis is meaningful enough to sweep. |
+| checkpoint-transition gate | done for current evidence | `docs/experiments/chosen_attribution_windows.md` | Select attribution windows from geometry curves. |
 | attribution-debug gate | todo | decision record | Decide whether to scale from 1k to 10k sequences. |
 
 ## Claim Discipline
