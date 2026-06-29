@@ -1,0 +1,24 @@
+schema_version: 0.1
+schema_id: concept_attribution_subset
+description: Stable nested sample membership for the three-method attribution ladder.
+
+required_fields:
+  sample_id: {type: string}
+  window_id: {type: string}
+  master_sample_member: {type: boolean}
+  vector_filter_member: {type: boolean}
+  activation_gradient_member: {type: boolean}
+  fopci_member: {type: boolean}
+  fopci_subset_kind: {type: string_or_null}
+  fopci_stratum: {type: string_or_null}
+  adaptive_selection_status: {type: string, allowed: [pending, finalized]}
+  selection_seed: {type: integer}
+  stable_hash: {type: string}
+  source: {type: object}
+
+validation_rules:
+  - every downstream subset must be contained in the master sample.
+  - the activation-gradient subset must be selected without method scores.
+  - preregistered stage must contain exactly 250 random FOPCI records and zero adaptive records.
+  - finalized stage must contain exactly 250 random and 250 adaptive FOPCI records.
+  - finalized adaptive strata counts must match the experiment config.

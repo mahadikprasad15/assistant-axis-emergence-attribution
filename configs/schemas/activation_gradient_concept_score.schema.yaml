@@ -1,0 +1,36 @@
+schema_version: 0.1
+schema_id: activation_gradient_concept_score
+description: Activation-gradient dot and cosine scores for one packed sequence.
+
+required_fields:
+  sample_id: {type: string}
+  window_id: {type: string}
+  uid: {type: string}
+  batch_idx: {type: integer}
+  checkpoint_revision: {type: string}
+  layer: {type: integer}
+  loss: {type: number}
+  valid_token_count: {type: integer}
+  update_pressure_norm: {type: number}
+  axis_metrics:
+    type: object
+    per_axis_fields:
+      dot: {type: number}
+      cosine: {type: number}
+  gradient_pooling: {type: string, expected: token_mean}
+  loss_reduction: {type: string, expected: sum_of_per_sequence_mean_losses}
+  torch_dtype: {type: string, expected: float32}
+  source: {type: object}
+
+optional_fields:
+  axis_scores: {type: object, description: Legacy cosine-only alias.}
+  axis_dot_scores: {type: object, description: Named raw dot scores.}
+  gradient_pressure_path: {type: string}
+  token_axis_diagnostics: {type: object}
+  token_axis_dot_diagnostics: {type: object}
+
+validation_rules:
+  - dot is the primary score and cosine is diagnostic.
+  - all scores and norms must be finite.
+  - scores for an identical record must be batch-size invariant within tolerance.
+  - positive dot means local update pressure toward the named target.

@@ -1,4 +1,4 @@
-schema_version: 0.2
+schema_version: 0.3
 schema_id: training_sequence_attribution_score
 description: >
   Contract for one activation-gradient attribution score on a sampled packed
@@ -53,9 +53,24 @@ required_fields:
   axis_scores:
     type: object
     description: Named sequence-level cosine scores for every supplied axis target.
+  axis_dot_scores:
+    type: object
+    description: Named raw dot products between update pressure and every supplied axis target.
+  axis_metrics:
+    type: object
+    description: Per-axis dot and cosine values; dot is primary and cosine is diagnostic.
   token_axis_diagnostics:
     type: object
     description: Per-axis summary statistics over token-level update-pressure cosines.
+  token_axis_dot_diagnostics:
+    type: object
+    description: Per-axis summary statistics over token-level update-pressure dot products.
+  loss_reduction:
+    type: string
+    expected: sum_of_per_sequence_mean_losses
+  torch_dtype:
+    type: string
+    expected: float32
   gradient_pooling:
     type: string
     expected: token_mean
@@ -87,6 +102,8 @@ validation_rules:
   - final_aa_score must be finite when final AA is provided.
   - gradient_pressure_path must exist when present.
   - gradient_token_scope must be all_valid_training_input_tokens for packed training data.
+  - raw axis dot is the primary ranking score; cosine is an orientation diagnostic.
+  - identical records must have batch-size-invariant dot scores within numerical tolerance.
 
 notes:
   - This is first-order activation-space pressure, not full parameter-update attribution.

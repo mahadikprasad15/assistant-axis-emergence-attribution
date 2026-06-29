@@ -1,12 +1,16 @@
 # Training Sequence Gradient Scorer Design
 
+> Current primary score: raw activation-gradient dot. Cosine is retained as an
+> orientation diagnostic for compatibility with the earlier smoke experiments.
+
 ## Purpose
 
 Phase 6A scores sampled packed Pythia training sequences by the local
 activation-space pressure they exert along the Assistant Axis:
 
 ```text
-packed token_ids -> next-token loss -> dL/dh_layer -> -cos(dL/dh_layer, v_AA)
+packed token_ids -> next-token loss -> dL/dh_layer
+                 -> dot(-mean(dL/dh_layer), v_target)
 ```
 
 This is the first Shifting-the-Gradient-style attribution stage.
@@ -17,9 +21,8 @@ The scorer consumes:
 
 ```text
 sampled_sequences.jsonl
-assistant_axis_vector.pt
-optional final assistant_axis_vector.pt
-optional additional named axis vectors
+concept_target_bundle.json
+or explicit local/final/additional axis vectors
 Pythia checkpoint revision
 ```
 
@@ -54,7 +57,8 @@ For each batch:
 3. Select `hidden_states[layer + 1]`, matching the activation cache runner.
 4. Retain the hidden-state gradient.
 5. Compute unreduced next-token cross entropy manually.
-6. Backprop the masked mean loss.
+6. Compute one mean next-token loss per sequence, sum those independent means,
+   and backpropagate the sum.
 7. Read `dL/dh_layer`.
 8. Pool the gradient over all valid training-token positions.
 9. Define update pressure:
@@ -63,24 +67,40 @@ For each batch:
 u_i = -mean_tokens(dL_i/dh_layer)
 ```
 
-10. Compute:
+10. Compute the primary and diagnostic scores:
 
 ```text
-local_aa_score = cosine(u_i, v_AA_local)
-final_aa_score = cosine(u_i, v_AA_final)
+primary:   dot(u_i, v_target)
+diagnostic: cosine(u_i, v_target)
 ```
 
-The scorer also supports repeated `--axis-target NAME=PATH` arguments. Every target is written under `axis_scores`, avoiding ambiguous labels when an endpoint axis is used with a pre-window model checkpoint.
+With `--target-bundle`, the runner reads endpoint, final, and innovation targets
+directly from the concept-attribution config. It also supports the older
+explicit axis arguments.
 
-For each named target it additionally computes token-level cosines before pooling and stores count, mean, standard deviation, quantiles, extrema, and positive fraction. `--save-token-axis-scores` persists the complete token arrays for later cancellation analysis.
+For each target it computes token-level dots and cosines before pooling and
+stores count, mean, standard deviation, quantiles, extrema, and positive
+fraction. `--save-token-axis-scores` persists both complete arrays.
+
+The batch loss is:
+
+```text
+L_batch = sum_i mean_valid_tokens(L_i)
+```
+
+It is not a mean across all tokens in the batch. Therefore adding unrelated
+records to a batch does not divide or rescale a sequence's hidden gradient.
 
 ## Interpretation
 
 ```text
-positive high: sequence locally pushes toward the Assistant Axis
+positive dot: sequence locally pushes toward the target
 near zero: little AA-aligned pressure
-negative: sequence locally pushes away from the Assistant Axis
+negative dot: sequence locally pushes away from the target
 ```
+
+Dot preserves update-pressure magnitude. Cosine discards magnitude and only
+describes orientation, so it remains useful but is not the ranking score.
 
 This is an activation-space first-order diagnostic, not a claim that a sequence
 caused a particular final weight update.
@@ -139,7 +159,7 @@ flowchart TD
   A["parse CLI args"] --> B["resolve run directory"]
   B --> C["load sampled_sequences.jsonl"]
   C --> D["load local/final AA vectors"]
-  D --> E["load model/tokenizer"]
+  D --> E["load step256 model/tokenizer"]
   E --> F["resume from attribution_scores.jsonl"]
   F --> G["batch pending samples"]
   G --> H["forward with output_hidden_states"]
@@ -159,7 +179,8 @@ flowchart TD
 | `load_axis_vector` | Load and normalize an AA vector from a run directory or tensor path. |
 | `prepare_batch` | Convert 2049-token rows into padded 2048-token inputs/targets. |
 | `score_batch` | Forward/backward one batch and return per-sequence scores. |
-| `safe_cosine` | Compute finite cosine similarity with validation. |
+| `safe_dot`, `safe_cosine` | Compute finite primary dot and diagnostic cosine scores. |
+| `token_dot_diagnostics` | Summarize token-level update-pressure dots. |
 | `load_completed_ids` | Resume from durable score JSONL and optional vector files. |
 | `write_progress` | Persist selected/completed ids and cursor. |
 | `summarize_scores` | Aggregate counts and window-level score summaries. |
@@ -170,3 +191,29 @@ flowchart TD
 - No PCA/SVD analysis; that is Phase 6B.
 - No causal gradient manipulation; that is Phase 7.
 - No continued training.
+
+## Concept-Attribution Execution
+
+Smoke test:
+
+```bash
+python scripts/analysis/score_training_sequence_gradients.py \
+  --sample-jsonl <subset-run>/results/activation_gradient_sequences.jsonl \
+  --target-bundle <target-run>/results/concept_target_bundle.json \
+  --limit 20 \
+  --batch-size 1 \
+  --hf-cache-dir /workspace/hf_cache \
+  --save-gradient-vectors \
+  --run-id activation-dot-step256-smoke-b1-v0
+```
+
+Repeat the same records with `--batch-size 8`, then compare dots:
+
+```bash
+python scripts/analysis/compare_gradient_attribution_runs.py \
+  --reference-run-dir <batch1-run> \
+  --candidate-run-dir <batch8-run> \
+  --score-type dot \
+  --max-absolute-delta 0.000001 \
+  --run-id activation-dot-batch-invariance-v0
+```

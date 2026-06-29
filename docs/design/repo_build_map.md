@@ -126,6 +126,7 @@ docs/
 | Config | Purpose | First Consumer |
 | --- | --- | --- |
 | `configs/experiments/pythia_410m_mvp_v0.yaml` | Wires model, checkpoints, rollout corpus, layers, output root, and sample sizes. | all runners |
+| `configs/experiments/pythia_410m_concept_attribution_256_512_v0.yaml` | Preregisters the three-method `step256 -> step512` attribution ladder and nested sample sizes. | target, subset, Vector Filter, activation-gradient, FOPCI, and comparison components |
 | `configs/models/pythia_410m_deduped.yaml` | Stores model repo, tokenizer, checkpoint revision policy, dtype/device defaults. | activation and steering runners |
 | `configs/datasets/pythia_preshuffled_stream.yaml` | Stores practical and official training-stream repos plus checkpoint-window mapping rules. | data planners and attribution runner |
 | `configs/rollouts/assistant_axis_source_material_v0.yaml` | Stores imported old repo paths, Assistant Axis source URLs, role instruction candidates, and 40-question candidate pool. | rollout config authoring, source importer |
@@ -143,6 +144,11 @@ docs/
 | `configs/schemas/training_sequence_decoded_preview.schema.yaml` | Defines one decoded preview record for sampled packed sequences. | training-sequence decoder |
 | `configs/schemas/training_sequence_attribution_score.schema.yaml` | Defines one activation-gradient attribution score. | gradient-attribution runner |
 | `configs/schemas/gradient_pressure_pca.schema.yaml` | Defines PCA component records over gradient-pressure vectors. | gradient-pressure PCA analyzer |
+| `configs/schemas/concept_target_bundle.schema.yaml` | Defines construction-split targets and held-out evaluation records. | concept target builder and FOPCI runner |
+| `configs/schemas/concept_attribution_subset.schema.yaml` | Defines stable nested and adaptive subset membership. | subset builder and all attribution runners |
+| `configs/schemas/vector_filter_score.schema.yaml` | Defines forward-only token projection summaries. | Vector Filter runner |
+| `configs/schemas/activation_gradient_concept_score.schema.yaml` | Defines primary activation-gradient dots plus cosine diagnostics. | activation-gradient runner |
+| `configs/schemas/first_order_concept_influence_score.schema.yaml` | Defines parameter-gradient concept influence scores. | FOPCI runner |
 | `configs/schemas/*.schema.yaml` | Future attribution and run manifest schemas. | validators |
 
 ## Source Import From Trait-Geometry Repo
@@ -211,6 +217,8 @@ Builders produce durable artifacts from configs and inputs.
 | `AssistantAxisBuilder` | activation records | AA vector artifact |
 | `RoleGeometryBuilder` | activation records | role vectors, PC1, loadings |
 | `ReportBuilder` | result JSON/CSV | Markdown report and plot manifest |
+| `ConceptTargetBundleBuilder` | fixed rollout activations plus question split | endpoint/final/native/innovation targets plus held-out evaluation records |
+| `ConceptAttributionSubsetBuilder` | master sample and cheaper-method scores | stable 2,000 activation and 500 FOPCI subset manifests |
 | `VASTMVPManifestTemplate` | completed VAST run artifacts | checklist-driven preservation/upload manifest |
 
 Builder rules:
@@ -218,6 +226,19 @@ Builder rules:
 - deterministic outputs,
 - validate before writing final files,
 - write a manifest with config hashes and counts.
+
+`ConceptTargetBundleBuilder` is implemented by
+`scripts/analysis/build_concept_target_bundle.py`. It consumes completed
+`step256`, `step512`, and `step143000` activation runs plus the fixed-response
+JSONL. Primary targets use construction questions only; its exported evaluation
+records are disjoint and are reserved for the differentiable FOPCI query.
+
+`ConceptAttributionSubsetBuilder` is implemented by
+`scripts/data/build_concept_attribution_subsets.py`. Its first stage freezes
+the 5,000 master records, the nested 2,000 activation-gradient records, and the
+250 preregistered-random FOPCI records using namespaced SHA-256 ranking. The
+remaining 250 adaptive FOPCI memberships stay explicitly pending until both
+cheaper methods finish.
 
 ## Builder Designs
 
@@ -227,6 +248,7 @@ Builder rules:
 - Activation config handoff: see `docs/design/activation_config_design.md`.
 - `AssistantAxisBuilder`: see `docs/design/assistant_axis_builder_design.md`.
 - `RoleGeometryBuilder`: see `docs/design/role_geometry_builder_design.md`.
+- `VectorFilterRunner`: see `docs/design/vector_filter_runner_design.md`.
 - VAST MVP external run: see `docs/runbooks/vast_mvp_runbook.md` and `docs/runbooks/vast_mvp_checklist.md`.
 
 ## Failure Learning
@@ -256,7 +278,9 @@ Runners perform expensive or stateful work.
 | `TrainingWindowPlanner` | selected checkpoint windows, training-stream config | Parquet shard list and `batch_idx` filters |
 | `TrainingSequenceSampler` | window plan, HF/local Parquet shards | sampled packed `token_ids` rows |
 | `TrainingSequenceDecoder` | sampled packed `token_ids` rows | decoded preview JSONL/CSV for inspection |
-| `GradientAttributionRunner` | training sequence sample, checkpoint, AA vector | attribution scores |
+| `GradientAttributionRunner` | frozen training-sequence subset, step256, concept target bundle | raw activation-gradient dots plus cosine diagnostics |
+| `VectorFilterRunner` | 5,000 packed sequences, step256, target bundle | forward-only token projection scores |
+| `FOPCIRunner` | 500 packed sequences, step256, target bundle, held-out evaluation records | parameter-gradient influence scores |
 | `GradientComponentInterventionRunner` | scored sequences, model checkpoint, AA vector | neutralize/amplify/attenuate intervention artifacts |
 | `SteeringRunner` | prompts, model checkpoint, AA vector, alpha schedule | steered completions |
 
@@ -267,6 +291,12 @@ Runner rules:
 - save `checkpoints/progress.json`,
 - skip already completed unit ids,
 - log stdout/stderr or structured events to `logs/run.log`.
+
+`VectorFilterRunner` is implemented by
+`scripts/analysis/score_vector_filter.py`. It uses `AutoModel` without the
+language-model head, hooks only the configured residual layer, batches packed
+sequences, and saves raw plus fixed-reference-centered token projection
+summaries with record-level resume.
 
 Current runner commands:
 
@@ -333,6 +363,7 @@ Analyzers compute metrics from existing artifacts.
 | `GradientPressurePCAAnalyzer` | saved update-pressure vectors plus AA vector | PC explained variance, PC-AA cosines, low-dimensionality report |
 | `RoleLoadingAnalyzer` | role vectors and AA/PC1 | role loading tables |
 | `AttributionSummaryAnalyzer` | scored training sequences | top/bottom tables and aggregate summaries |
+| `ConceptAttributionMethodComparator` | Vector Filter, activation-gradient, FOPCI scores and subset manifest | rank correlations, top-k overlap, target stability, and random/adaptive reports |
 | `GeometryReportBuilder` | AA summary plus role geometry summary/loadings | sanity report and proceed/caution/stop gate |
 | `AxisTrajectoryPlotter` | trajectory CSVs | cosine, geometry-quality, loading-correlation, transition-score, and moving-role plots |
 | `HFArtifactUploader` | curated artifact paths | private HF dataset upload plus upload manifest |
@@ -358,6 +389,9 @@ Gates create explicit proceed/pivot decisions.
 | final-AA sanity gate | Does final AA align with role PC1 enough to continue? | `docs/experiments/final_checkpoint_geometry_step143000.md` |
 | checkpoint-transition gate | Which windows are worth attribution? | `docs/experiments/chosen_attribution_windows.md`, `docs/experiments/dense_1000_5000_sweep.md` |
 | attribution-debug gate | Are gradient scores stable and interpretable enough for 10k samples? | proceed/pivot note |
+| concept-attribution target gate | Are target construction and FOPCI evaluation question sets disjoint and category-balanced? | target bundle validation report |
+| activation-dot scaling gate | Are float32 raw dots reproducible and invariant to attribution batch size? | run comparison report |
+| FOPCI smoke gate | Are query/sequence gradients finite and nonzero for 50 records? | proceed/pivot status before 500 records |
 | gradient-structure gate | Is AA-aligned pressure low-dimensional enough to justify intervention experiments? | PCA report and proceed/pivot note |
 | causal-validation gate | Is continued-pretraining worth the compute? | go/no-go decision |
 

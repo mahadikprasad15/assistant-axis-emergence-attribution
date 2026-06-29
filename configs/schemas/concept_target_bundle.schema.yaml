@@ -1,0 +1,34 @@
+schema_version: 0.1
+schema_id: concept_target_bundle
+description: Fixed concept targets and held-out evaluation split for FOPCI.
+
+required_fields:
+  bundle_id: {type: string}
+  model_id: {type: string}
+  layer: {type: integer}
+  construction_question_ids: {type: list_of_integers}
+  evaluation_question_ids: {type: list_of_integers}
+  targets:
+    type: list
+    item_required_fields:
+      axis_name: {type: string}
+      source_revision: {type: string}
+      vector_path: {type: string}
+      vector_norm: {type: number}
+      construction_split_hash: {type: string}
+  evaluation_records_jsonl: {type: string}
+  reference_mean:
+    type: object
+    required_keys: [reference_name, vector_path, definition]
+  source: {type: object}
+
+validation_rules:
+  - construction_question_ids and evaluation_question_ids must be disjoint.
+  - each split must cover all configured question categories.
+  - every target vector must be finite and unit normalized.
+  - innovation_256_to_512 must be orthogonal to native_step256 within tolerance.
+  - evaluation records must not contribute to target construction.
+  - reference_mean must be derived from construction-split step256 activations.
+
+notes:
+  - Existing all-question axes are sensitivity references, not primary targets.

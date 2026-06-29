@@ -1,0 +1,34 @@
+schema_version: 0.1
+schema_id: first_order_concept_influence_score
+description: First-order parameter-space concept influence for one packed sequence.
+
+required_fields:
+  sample_id: {type: string}
+  window_id: {type: string}
+  uid: {type: string}
+  batch_idx: {type: integer}
+  checkpoint_revision: {type: string}
+  parameter_scope_id: {type: string}
+  parameter_count: {type: integer}
+  loss: {type: number}
+  sequence_gradient_norm: {type: number}
+  axis_scores:
+    type: object
+    per_axis_fields:
+      query_gradient_norm: {type: number}
+      negative_gradient_dot: {type: number}
+      gradient_cosine: {type: number}
+  subset_kind: {type: string, allowed: [random, adaptive]}
+  subset_stratum: {type: string}
+  curvature: {type: string, expected: identity}
+  source: {type: object}
+
+validation_rules:
+  - negative_gradient_dot is the primary FOPCI score.
+  - query gradients use evaluation questions and fixed construction-split targets.
+  - target vectors must be detached while the live evaluation contrast remains differentiable.
+  - parameter names and scope hash must be recorded in source metadata.
+  - all scores and norms must be finite.
+
+notes:
+  - This is a local first-order estimate, not exact historical training influence.

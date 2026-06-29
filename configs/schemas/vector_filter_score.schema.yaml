@@ -1,0 +1,33 @@
+schema_version: 0.1
+schema_id: vector_filter_score
+description: Forward-only target projection summaries for one packed sequence.
+
+required_fields:
+  sample_id: {type: string}
+  window_id: {type: string}
+  uid: {type: string}
+  batch_idx: {type: integer}
+  model_id: {type: string}
+  checkpoint_revision: {type: string}
+  layer: {type: integer}
+  valid_token_count: {type: integer}
+  axis_scores:
+    type: object
+    per_axis_fields:
+      mean_raw_projection: {type: number}
+      max_raw_projection: {type: number}
+      top_k_mean_raw_projection: {type: number}
+      positive_token_fraction: {type: number}
+  source: {type: object}
+
+optional_fields:
+  centered_axis_scores: {type: object}
+  token_projection_path: {type: string}
+
+validation_rules:
+  - all scores must be finite.
+  - positive_token_fraction must be between 0 and 1.
+  - token scope must exclude padding and the unscored final token.
+
+notes:
+  - This is a representational filter, not a causal influence estimate.

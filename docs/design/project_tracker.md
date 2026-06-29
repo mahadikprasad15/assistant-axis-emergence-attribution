@@ -69,20 +69,22 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Training sequence sampler | Implemented, data-run external | `scripts/data/sample_training_sequences.py` consumes window plans and samples packed `token_ids` rows from HF/local Parquet shards; includes per-file progress/log events for large Parquet reads. |
 | Training sequence decoder | Implemented | `scripts/data/decode_training_sequences.py` consumes sampled `token_ids`, decodes Pythia text previews, and writes inspection artifacts before gradient scoring. |
 | Gradient-pressure PCA | Smoke-run verified | The 50-sequence centered PCA completed; PC1 EVR was 0.155 and weakly AA-aligned, motivating native-target, token-level, and precision diagnostics before scaling. |
-| Gradient attribution diagnostics | Implemented, VAST smoke pending | Named axis targets, optional full token cosine tensors, token cancellation summaries, and auto-vs-float32 run comparison. |
+| Gradient attribution diagnostics | Implemented; deterministic batch gate passed; Pythia gate pending | Named axis targets, raw dots, token diagnostics, and exact float32 agreement on 8 synthetic shared records at batch sizes 1 vs 8. Real `step256` validation still requires the target bundle, packed-sequence sample, and model files. |
+| Three-method concept attribution design | Done | `step256 -> step512` plan uses 5,000 Vector Filter, 2,000 activation-gradient dot, and 500 FOPCI sequences with held-out question splits and nested subset manifests. |
+| Concept attribution implementation | In progress | All three method runners now exist: Vector Filter, activation-gradient dot, and FOPCI. FOPCI includes held-out query-gradient caching, parameter scopes, streamed per-sequence dots, and resume artifacts; real target/subset builds and shared pilot runs remain. |
 | Gradient-component interventions | Deferred | Neutralize/amplify/attenuate AA-aligned gradient components only after observational attribution and PCA are stable. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
 
 ## Next Build Order
 
-1. Regenerate improved coarse and early-dense plots from HF/Colab artifacts and upload them.
-2. Run `scripts/data/plan_training_window.py` to materialize the selected attribution window plan.
-3. Run `scripts/data/sample_training_sequences.py` on a tiny sample from one planned window.
-4. Run `scripts/data/decode_training_sequences.py` to inspect sampled packed sequences.
-5. Run activation-gradient attribution on a debug sample.
-6. Run PCA/SVD over saved gradient-pressure vectors if the scorer artifacts look sane.
-7. Produce top/bottom sequence tables and source/mapping TODOs.
-8. Add tiny continued-pretraining or gradient-component validation only after the gradient scorer and PCA are stable.
+1. Run the split-aware concept target builder on the real `step256`, `step512`, and `step143000` activation artifacts.
+2. Materialize the 5,000-record `step256 -> step512` master sample and nested random memberships with the implemented subset builder.
+3. Implement and run Vector Filter on all 5,000 records.
+4. Run activation-gradient batch-invariance smoke tests, then score the frozen 2,000 records with raw dots.
+5. Freeze the 250 random plus 250 adaptive FOPCI manifest.
+6. Run the FOPCI deterministic/real smoke gates before the 500-record run.
+7. Compare methods separately on random and adaptive subsets.
+8. Select top/bottom/random records for later controlled update validation.
 
 The detailed task queue lives in `docs/design/tasklist.md`; update it together with this tracker.
 
@@ -100,6 +102,9 @@ The detailed task queue lives in `docs/design/tasklist.md`; update it together w
 | `docs/design/geometry_report_design.md` | Final-checkpoint geometry sanity gate. | Gate criteria or report outputs change. |
 | `docs/design/training_sequence_gradient_scorer_design.md` | Phase 6A attribution scorer design. | Gradient object, scoring rule, or scorer outputs change. |
 | `docs/design/gradient_attribution_extensions_design.md` | Shifting-style PCA and causal-extension plan. | Gradient-pressure PCA, intervention, or validation design changes. |
+| `docs/design/concept_attribution_ladder_design.md` | Vector Filter, activation-gradient dot, and FOPCI architecture. | Method definitions, sample sizes, targets, schemas, or gates change. |
+| `docs/design/vector_filter_runner_design.md` | Forward-only Vector Filter inputs, helpers, batching, projection scores, and artifacts. | Vector Filter execution or score definitions change. |
+| `docs/learning/concept_target_split_walkthrough.md` | Checkpoint-window versus question-split explanation and circularity boundary. | Target construction, held-out evaluation, or causal interpretation changes. |
 | `docs/runbooks/vast_mvp_runbook.md` | End-to-end VAST commands for the first final-checkpoint report. | VAST setup, generator model, run ids, or artifact paths change. |
 | `docs/runbooks/vast_mvp_checklist.md` | Preflight/progress checklist for the VAST MVP run. | Run criteria, required artifacts, or post-run preservation changes. |
 | `docs/manifests/vast_mvp_upload_manifest_template.json` | Template for recording artifacts to preserve/upload after VAST. | Required artifacts or upload targets change. |

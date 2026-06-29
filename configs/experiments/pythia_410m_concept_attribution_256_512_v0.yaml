@@ -1,0 +1,148 @@
+schema_version: 0.1
+experiment_id: pythia_410m_concept_attribution_256_512_v0
+description: >
+  Preregistered three-method concept-attribution ladder for packed sequences
+  seen between Pythia step256 and step512.
+
+model:
+  model_id: EleutherAI/pythia-410m-deduped
+  scoring_revision: step256
+  endpoint_revision: step512
+  final_revision: step143000
+  layer: 12
+  hook_name: gpt_neox.layers.12
+  torch_dtype: float32
+
+axis_construction:
+  axis_config: configs/experiments/pythia_410m_mvp_v0.yaml
+  axis_variant_id: aa_main
+  fixed_response_jsonl: data/rollouts/assistant_axis_rollouts_v0_responses.jsonl
+  default_prompt_ids:
+    - helpful_assistant
+    - large_language_model
+  contrast_role_groups:
+    - non_assistant_non_neutral
+
+training_window:
+  window_id: step256_to_step512
+  start_step_inclusive: 256
+  end_step_exclusive: 512
+  dataset_config: configs/datasets/pythia_preshuffled_stream.yaml
+  expected_parquet_file: data/train-001000.parquet
+
+question_split:
+  source_config: configs/rollouts/assistant_axis_roles_v0.yaml
+  construction_question_ids: [0, 36, 91, 186, 151, 101, 40, 5, 24, 64]
+  evaluation_question_ids: [7, 176, 120, 228, 197, 167, 119, 170, 81, 125]
+  require_disjoint: true
+  require_all_categories_in_each_split: true
+
+axis_targets:
+  primary:
+    - endpoint_step512
+    - final_step143000
+    - innovation_256_to_512
+  diagnostics:
+    - native_step256
+    - all_questions_step512
+    - all_questions_step143000
+  construction_policy: construction_questions_only
+  evaluation_policy: evaluation_questions_only
+  innovation_definition: normalize(endpoint_step512_minus_projection_onto_native_step256)
+
+sampling:
+  seed: 1729
+  stable_key: sample_id
+  master_sample_size: 5000
+  vector_filter_sample_size: 5000
+  activation_gradient_sample_size: 2000
+  fopci_sample_size: 500
+  nested_subsets: true
+  fopci_random_size: 250
+  fopci_adaptive_size: 250
+  adaptive_strata:
+    concordant_high: 50
+    concordant_low: 50
+    vector_filter_high_activation_gradient_low: 50
+    activation_gradient_high_vector_filter_low: 50
+    endpoint_final_target_disagreement: 25
+    near_zero_control: 25
+
+vector_filter:
+  checkpoint_revision: step256
+  batch_size: 20
+  token_scope: all_valid_training_input_tokens
+  primary_score: mean_raw_projection
+  summaries:
+    - mean_raw_projection
+    - max_raw_projection
+    - top_k_mean_raw_projection
+    - positive_token_fraction
+    - mean_hidden_norm
+  top_k_tokens: 32
+  centered_projection_sensitivity: true
+
+activation_gradient:
+  checkpoint_revision: step256
+  batch_size: 1
+  batch_size_validation: [1, 8]
+  token_scope: all_valid_training_input_tokens
+  pooling: token_mean
+  loss_reduction: sum_of_per_sequence_mean_losses
+  primary_score: update_pressure_dot
+  diagnostics:
+    - update_pressure_cosine
+    - update_pressure_norm
+    - loss
+    - token_axis_dot_summary
+  save_gradient_vectors: true
+  save_token_axis_scores: false
+
+fopci:
+  checkpoint_revision: step256
+  query_metric: fixed_target_dot_live_evaluation_contrast
+  primary_score: negative_parameter_gradient_dot
+  curvature: identity
+  batch_size: 1
+  smoke_size: 50
+  parameter_scope_primary: all_parameters
+  parameter_scope_sensitivity:
+    - layer12_only
+    - upper_half_layers
+  diagnostics:
+    - parameter_gradient_cosine
+    - sequence_gradient_norm
+    - query_gradient_norm
+  persist_query_gradient: true
+  persist_per_sequence_parameter_gradients: false
+
+comparison:
+  report_random_and_adaptive_separately: true
+  metrics:
+    - pearson
+    - spearman
+    - top_k_overlap
+    - bottom_k_overlap
+    - sign_agreement
+    - target_rank_stability
+  top_k_values: [25, 50, 100]
+
+artifact_layout:
+  output_root: artifacts/runs
+  experiment_name: assistant_axis_attribution
+  model_name: pythia-410m-deduped
+  dataset_name: pile-deduped-pythia-preshuffled
+  probe_set: concept-attribution-256-512-v0
+
+gates:
+  before_vector_filter:
+    - master sample has exactly 5000 unique sample ids.
+    - construction and evaluation question sets are disjoint.
+    - construction-split target bundle exists and hashes validate.
+  before_activation_gradient:
+    - vector filter completed for all 5000 records.
+    - activation subset manifest contains exactly 2000 ids.
+  before_fopci_full:
+    - fopci subset manifest contains 250 random and 250 adaptive ids.
+    - 50-record smoke has finite nonzero query and sequence gradient norms.
+    - no target has systematic NaN scores.

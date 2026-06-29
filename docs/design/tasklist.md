@@ -205,6 +205,37 @@ Exit criteria:
 - We have ranked and control-matched sequence subsets ready for Phase 7.
 - Causal intervention scripts are not started until observational scores and PCA are stable.
 
+## Phase 6C: Three-Method Concept Attribution Ladder
+
+This phase supersedes scaling cosine-only attribution. The first experiment is
+preregistered for `step256 -> step512` with nested samples: 5,000 Vector Filter,
+2,000 activation-gradient, and 500 FOPCI records.
+
+| ID | Task | Status | Output |
+| --- | --- | --- | --- |
+| P6C.1 | Define the held-out three-method experiment and claim boundary. | done | `docs/design/concept_attribution_ladder_design.md`, `docs/experiments/concept_attribution_256_512_plan.md` |
+| P6C.2 | Add the concrete step256-to-step512 config. | done | `configs/experiments/pythia_410m_concept_attribution_256_512_v0.yaml` |
+| P6C.3 | Define target-bundle, subset, Vector Filter, activation-gradient, and FOPCI schemas. | done | `configs/schemas/concept_target_bundle.schema.yaml` and four method/subset schemas |
+| P6C.4 | Build construction/evaluation-split target bundle. | done | `scripts/analysis/build_concept_target_bundle.py` |
+| P6C.5 | Build stable 5,000 master, 2,000 activation, and 250 random FOPCI memberships. | done | `scripts/data/build_concept_attribution_subsets.py` |
+| P6C.6 | Implement resumable Vector Filter runner. | done | `scripts/analysis/score_vector_filter.py`; real 5,000-record scoring remains to run externally. |
+| P6C.7 | Extend activation-gradient runner with named raw dot scores and batch-invariant loss scaling. | done | `scripts/analysis/score_training_sequence_gradients.py` |
+| P6C.8 | Verify activation-gradient float32 and batch-size invariance on shared records. | in progress | Deterministic scorer code-path gate passed for 8 shared records at batch sizes 1 vs 8 with max absolute delta 0 (`activation-gradient-batch-invariance-codepath/codepath-gate-v0`); full Pythia gate awaits target bundle, real sample, and cached `step256` model. |
+| P6C.9 | Freeze 250 adaptive FOPCI records from preregistered strata. | todo | completed subset manifest |
+| P6C.10 | Implement held-out FOPCI query-gradient builder and runner. | done | `scripts/analysis/score_first_order_concept_influence.py` |
+| P6C.11 | Run 50-record FOPCI smoke, then 500 records. | todo | FOPCI run artifacts |
+| P6C.11a | Add shared three-method pilot orchestrator and input preflight. | done | `scripts/analysis/run_concept_attribution_pilot.py` |
+| P6C.12 | Compare all methods on random and adaptive subsets separately. | todo | `scripts/analysis/compare_concept_attribution_methods.py` |
+| P6C.13 | Produce decoded examples, plots, and causal-validation recommendation. | todo | attribution ladder report |
+
+Exit criteria:
+
+- Probe construction and evaluation question IDs are disjoint and category-balanced.
+- Dot scores, norms, dtypes, parameter scopes, and stable sample memberships are persisted.
+- The 250 random FOPCI records support unbiased method comparison.
+- The 250 adaptive records test agreement, disagreement, target sensitivity, and near-zero controls.
+- No causal formation claim is made before controlled update validation.
+
 ## Phase 7: Steering and Causal Validation
 
 | ID | Task | Status | Output |
