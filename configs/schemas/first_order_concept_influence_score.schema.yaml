@@ -11,16 +11,17 @@ required_fields:
   parameter_scope_id: {type: string}
   parameter_count: {type: integer}
   loss: {type: number}
-  sequence_gradient_norm: {type: number}
+  sequence_gradient_norm: {type: [number, 'null']}
   axis_scores:
     type: object
     per_axis_fields:
       query_gradient_norm: {type: number}
       negative_gradient_dot: {type: number}
-      gradient_cosine: {type: number}
+      gradient_cosine: {type: [number, 'null']}
   subset_kind: {type: string, allowed: [random, adaptive]}
   subset_stratum: {type: string}
   curvature: {type: string, expected: identity}
+  scoring_mode: {type: string, allowed: [sequential_gradient, directional_jvp]}
   source: {type: object}
 
 validation_rules:
@@ -29,6 +30,7 @@ validation_rules:
   - target vectors must be detached while the live evaluation contrast remains differentiable.
   - parameter names and scope hash must be recorded in source metadata.
   - all scores and norms must be finite.
+  - directional_jvp preserves the primary negative_gradient_dot exactly but does not materialize sequence_gradient_norm or gradient_cosine.
 
 notes:
   - This is a local first-order estimate, not exact historical training influence.

@@ -71,7 +71,7 @@ This is the canonical running tracker for the Assistant Axis Emergence and Attri
 | Gradient-pressure PCA | Smoke-run verified | The 50-sequence centered PCA completed; PC1 EVR was 0.155 and weakly AA-aligned, motivating native-target, token-level, and precision diagnostics before scaling. |
 | Gradient attribution diagnostics | Implemented; deterministic batch gate passed; Pythia gate pending | Named axis targets, raw dots, token diagnostics, and exact float32 agreement on 8 synthetic shared records at batch sizes 1 vs 8. Real `step256` validation still requires the target bundle, packed-sequence sample, and model files. |
 | Three-method concept attribution design | Done | `step256 -> step512` plan uses 5,000 Vector Filter, 2,000 activation-gradient dot, and 500 FOPCI sequences with held-out question splits and nested subset manifests. |
-| Concept attribution implementation | In progress | All three method runners now exist: Vector Filter, activation-gradient dot, and FOPCI. FOPCI includes held-out query-gradient caching, parameter scopes, streamed per-sequence dots, and resume artifacts; real target/subset builds and shared pilot runs remain. |
+| Concept attribution implementation | In progress | All three runners exist and the ten-record sequential pilot passed. FOPCI now includes batched query construction, external cached-query import, directional-JVP sequence batching, comparison artifacts, and CPU equivalence tests; ten-record Pythia GPU equivalence and the 50-record smoke remain. |
 | Gradient-component interventions | Deferred | Neutralize/amplify/attenuate AA-aligned gradient components only after observational attribution and PCA are stable. |
 | Causal validation | Deferred | Start after attribution scores look stable. |
 

@@ -104,6 +104,9 @@ fopci:
   primary_score: negative_parameter_gradient_dot
   curvature: identity
   batch_size: 1
+  query_batch_size: 1
+  sequence_score_mode: sequential_gradient
+  sequence_batch_size: 1
   smoke_size: 50
   parameter_scope_primary: all_parameters
   parameter_scope_sensitivity:

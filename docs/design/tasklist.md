@@ -223,7 +223,8 @@ preregistered for `step256 -> step512` with nested samples: 5,000 Vector Filter,
 | P6C.8 | Verify activation-gradient float32 and batch-size invariance on shared records. | in progress | Deterministic scorer code-path gate passed for 8 shared records at batch sizes 1 vs 8 with max absolute delta 0 (`activation-gradient-batch-invariance-codepath/codepath-gate-v0`); full Pythia gate awaits target bundle, real sample, and cached `step256` model. |
 | P6C.9 | Freeze 250 adaptive FOPCI records from preregistered strata. | todo | completed subset manifest |
 | P6C.10 | Implement held-out FOPCI query-gradient builder and runner. | done | `scripts/analysis/score_first_order_concept_influence.py` |
-| P6C.11 | Run 50-record FOPCI smoke, then 500 records. | todo | FOPCI run artifacts |
+| P6C.10A | Implement batched query construction, cached-query import, directional-JVP sequence scoring, and sequential-reference comparison. | in progress | CPU toy-model equivalence tests pass; ten-record Pythia GPU equivalence gates remain. |
+| P6C.11 | Run 50-record FOPCI smoke, then 500 records. | in progress | Ten-record sequential pilot passed; optimized ten-record equivalence and 50-record smoke remain. |
 | P6C.11a | Add shared three-method pilot orchestrator and input preflight. | done | `scripts/analysis/run_concept_attribution_pilot.py` |
 | P6C.12 | Compare all methods on random and adaptive subsets separately. | todo | `scripts/analysis/compare_concept_attribution_methods.py` |
 | P6C.13 | Produce decoded examples, plots, and causal-validation recommendation. | todo | attribution ladder report |

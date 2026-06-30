@@ -223,6 +223,24 @@ and resumes from valid `fopci_scores.jsonl` records. `layer12_only` is the
 pilot scope; `all_parameters` remains the preregistered primary scope when
 memory permits.
 
+The runner also exposes two optimized modes behind explicit validation gates:
+
+```text
+query batching:
+  --query-batch-size N
+
+directional per-sequence scoring:
+  --sequence-score-mode directional_jvp
+  --sequence-batch-size N
+```
+
+Query batching preserves globally defined default/contrast weights and
+record-local response pooling. Directional scoring computes the primary raw
+dot exactly without materializing full per-example gradients; consequently it
+does not emit sequence-gradient norms or gradient cosines. Optimized Pythia
+runs must match the sequential ten-record reference through
+`compare_fopci_query_gradients.py` and `compare_fopci_runs.py` before scaling.
+
 ## FOPCI Selection
 
 The 500-sequence set contains:
