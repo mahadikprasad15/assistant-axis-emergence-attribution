@@ -258,6 +258,93 @@ def sample_rows(candidates: list[dict[str, Any]], sample_size: int, seed: int) -
     return [candidates[index] for index in indices]
 
 
+def reservoir_sample_parquet(
+    plan: dict[str, Any],
+    args: argparse.Namespace,
+    log_path: Path,
+    sample_size: int,
+    seed: int,
+    tqdm: Any | None,
+    progress_enabled: bool,
+) -> tuple[list[dict[str, Any]], int]:
+    """Uniformly sample a filtered Parquet window with bounded host memory."""
+    try:
+        import pyarrow.dataset as ds
+    except ImportError as exc:
+        raise RuntimeError("pyarrow is required for streaming Parquet sampling") from exc
+
+    start = int(plan["row_filter"]["batch_idx_gte"])
+    end = int(plan["row_filter"]["batch_idx_lt"])
+    rng = random.Random(seed)
+    reservoir: list[dict[str, Any]] = []
+    candidate_count = 0
+    parquet_files = [str(item) for item in plan["parquet_files"]]
+    file_iter = (
+        tqdm(parquet_files, desc=f"{plan['window_id']} parquet files", unit="file", leave=False)
+        if tqdm
+        else parquet_files
+    )
+    for parquet_file in file_iter:
+        progress_print(
+            progress_enabled,
+            f"[{plan['window_id']}] streaming {parquet_file} for batch_idx [{start}, {end})",
+        )
+        path = file_path_for_plan(plan, parquet_file, args)
+        started = time.perf_counter()
+        dataset = ds.dataset(str(path), format="parquet")
+        scanner = dataset.scanner(
+            columns=["uid", "batch_idx", "token_ids"],
+            filter=(ds.field("batch_idx") >= start) & (ds.field("batch_idx") < end),
+            batch_size=512,
+            use_threads=True,
+        )
+        batches = scanner.to_batches()
+        batch_iter = tqdm(batches, desc=f"{parquet_file} batches", unit="batch", leave=False) if tqdm else batches
+        file_candidates = 0
+        for batch in batch_iter:
+            uid_column = batch.column(batch.schema.get_field_index("uid"))
+            batch_idx_column = batch.column(batch.schema.get_field_index("batch_idx"))
+            token_column = batch.column(batch.schema.get_field_index("token_ids"))
+            for row_index in range(batch.num_rows):
+                stream_index = candidate_count
+                candidate_count += 1
+                file_candidates += 1
+                if len(reservoir) < sample_size:
+                    slot = len(reservoir)
+                else:
+                    slot = rng.randrange(candidate_count)
+                    if slot >= sample_size:
+                        continue
+                record = {
+                    "uid": str(uid_column[row_index].as_py()),
+                    "batch_idx": int(batch_idx_column[row_index].as_py()),
+                    "token_ids": normalize_token_ids(token_column[row_index].as_py()),
+                    "source_file": parquet_file,
+                    "_stream_index": stream_index,
+                }
+                if slot == len(reservoir):
+                    reservoir.append(record)
+                else:
+                    reservoir[slot] = record
+        append_jsonl(
+            log_path,
+            {
+                "time_utc": utc_now(),
+                "event": "parquet_stream_done",
+                "window_id": str(plan["window_id"]),
+                "parquet_file": parquet_file,
+                "local_path": str(path),
+                "candidate_rows": file_candidates,
+                "reservoir_records": len(reservoir),
+                "elapsed_seconds": round(time.perf_counter() - started, 3),
+            },
+        )
+    reservoir.sort(key=lambda row: int(row["_stream_index"]))
+    for row in reservoir:
+        row.pop("_stream_index")
+    return reservoir, candidate_count
+
+
 def build_sample_record(row: dict[str, Any], plan: dict[str, Any], run_dir: Path) -> dict[str, Any]:
     token_ids = row["token_ids"]
     window_id = str(plan["window_id"])
@@ -386,20 +473,29 @@ def main() -> int:
                 )
                 continue
 
-            candidates = list(iter_candidate_rows(plan, args, log_path, tqdm, progress_enabled))
-            chosen = sample_rows(candidates, max(0, target - existing), planned_seed(plan, index))
-            for row in chosen:
+            chosen, candidate_count = reservoir_sample_parquet(
+                plan, args, log_path, target, planned_seed(plan, index), tqdm, progress_enabled
+            )
+            existing_ids = {str(row["sample_id"]) for row in existing_rows if str(row["window_id"]) == window_id}
+            chosen_ids = {f"{window_id}__{row['uid']}" for row in chosen}
+            if existing_ids - chosen_ids:
+                raise ValueError(
+                    f"existing sample for {window_id} does not match deterministic reservoir selection; "
+                    "use a new run id"
+                )
+            new_rows = [row for row in chosen if f"{window_id}__{row['uid']}" not in existing_ids]
+            for row in new_rows:
                 append_jsonl(samples_path, build_sample_record(row, plan, run_dir))
-            total = existing + len(chosen)
+            total = len(existing_ids | chosen_ids)
             counts[window_id] = total
             summary_rows.append(
                 {
                     "window_id": window_id,
                     "planned_sample_size": target,
                     "existing_records": existing,
-                    "new_records": len(chosen),
+                    "new_records": len(new_rows),
                     "total_records": total,
-                    "candidate_rows": len(candidates),
+                    "candidate_rows": candidate_count,
                     "parquet_files": ";".join(plan["parquet_files"]),
                     "status": "completed" if total >= target else "partial",
                 }
