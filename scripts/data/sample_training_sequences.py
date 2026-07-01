@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gc
 import json
 import random
 import secrets
@@ -268,10 +269,10 @@ def reservoir_sample_parquet(
     tqdm: Any | None,
     progress_enabled: bool,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Uniformly sample a filtered Parquet window with bounded host memory."""
+    """Two-pass uniform sampling without decoding unselected token rows."""
     try:
         import pyarrow as pa
-        import pyarrow.dataset as ds
+        import pyarrow.parquet as pq
     except ImportError as exc:
         raise RuntimeError("pyarrow is required for streaming Parquet sampling") from exc
 
@@ -281,57 +282,68 @@ def reservoir_sample_parquet(
     reservoir: list[dict[str, Any]] = []
     candidate_count = 0
     parquet_files = [str(item) for item in plan["parquet_files"]]
-    file_iter = (
-        tqdm(parquet_files, desc=f"{plan['window_id']} parquet files", unit="file", leave=False)
-        if tqdm
-        else parquet_files
-    )
-    for parquet_file in file_iter:
+    resolved_paths: dict[str, Path] = {}
+
+    # Pass 1: select row coordinates using only the small scalar columns.
+    for parquet_file in parquet_files:
         progress_print(
             progress_enabled,
-            f"[{plan['window_id']}] streaming {parquet_file} for batch_idx [{start}, {end})",
+            f"[{plan['window_id']}] pass 1/2 selecting rows from {parquet_file}",
         )
         path = file_path_for_plan(plan, parquet_file, args)
+        resolved_paths[parquet_file] = path
         started = time.perf_counter()
-        dataset = ds.dataset(str(path), format="parquet")
-        scanner = dataset.scanner(
-            columns=["uid", "batch_idx", "token_ids"],
-            filter=(ds.field("batch_idx") >= start) & (ds.field("batch_idx") < end),
-            batch_size=128,
-            use_threads=False,
-            batch_readahead=1,
-            fragment_readahead=1,
-        )
-        batches = scanner.to_batches()
-        batch_iter = tqdm(batches, desc=f"{parquet_file} batches", unit="batch", leave=False) if tqdm else batches
+        parquet = pq.ParquetFile(path, memory_map=True, pre_buffer=False)
         file_candidates = 0
-        for batch_number, batch in enumerate(batch_iter, start=1):
-            uid_column = batch.column(batch.schema.get_field_index("uid"))
-            batch_idx_column = batch.column(batch.schema.get_field_index("batch_idx"))
-            token_column = batch.column(batch.schema.get_field_index("token_ids"))
-            for row_index in range(batch.num_rows):
-                stream_index = candidate_count
-                candidate_count += 1
-                file_candidates += 1
-                if len(reservoir) < sample_size:
-                    slot = len(reservoir)
-                else:
-                    slot = rng.randrange(candidate_count)
-                    if slot >= sample_size:
+        row_group_iter = range(parquet.metadata.num_row_groups)
+        if tqdm:
+            row_group_iter = tqdm(
+                row_group_iter,
+                total=parquet.metadata.num_row_groups,
+                desc=f"{parquet_file} scalar row groups",
+                unit="group",
+                leave=False,
+            )
+        for row_group in row_group_iter:
+            row_offset = 0
+            for batch in parquet.iter_batches(
+                batch_size=8192,
+                row_groups=[row_group],
+                columns=["uid", "batch_idx"],
+                use_threads=False,
+            ):
+                uid_column = batch.column(batch.schema.get_field_index("uid"))
+                batch_idx_column = batch.column(batch.schema.get_field_index("batch_idx"))
+                for batch_row in range(batch.num_rows):
+                    batch_idx = int(batch_idx_column[batch_row].as_py())
+                    if not start <= batch_idx < end:
                         continue
-                record = {
-                    "uid": str(uid_column[row_index].as_py()),
-                    "batch_idx": int(batch_idx_column[row_index].as_py()),
-                    "token_ids": array("I", token_column[row_index].as_py()),
-                    "source_file": parquet_file,
-                    "_stream_index": stream_index,
-                }
-                if slot == len(reservoir):
-                    reservoir.append(record)
-                else:
-                    reservoir[slot] = record
-            if batch_number % 64 == 0:
+                    stream_index = candidate_count
+                    candidate_count += 1
+                    file_candidates += 1
+                    if len(reservoir) < sample_size:
+                        slot = len(reservoir)
+                    else:
+                        slot = rng.randrange(candidate_count)
+                        if slot >= sample_size:
+                            continue
+                    record = {
+                        "uid": str(uid_column[batch_row].as_py()),
+                        "batch_idx": batch_idx,
+                        "source_file": parquet_file,
+                        "_row_group": row_group,
+                        "_row_index": row_offset + batch_row,
+                        "_stream_index": stream_index,
+                    }
+                    if slot == len(reservoir):
+                        reservoir.append(record)
+                    else:
+                        reservoir[slot] = record
+                row_offset += batch.num_rows
+                del uid_column, batch_idx_column, batch
+            if row_group % 16 == 0:
                 pa.default_memory_pool().release_unused()
+                gc.collect()
         pa.default_memory_pool().release_unused()
         append_jsonl(
             log_path,
@@ -346,9 +358,60 @@ def reservoir_sample_parquet(
                 "elapsed_seconds": round(time.perf_counter() - started, 3),
             },
         )
+
+    # Pass 2: decode token IDs only for the selected row coordinates.
+    selected_groups: dict[tuple[str, int], list[tuple[int, int]]] = {}
+    for slot, record in enumerate(reservoir):
+        key = (str(record["source_file"]), int(record["_row_group"]))
+        selected_groups.setdefault(key, []).append((int(record["_row_index"]), slot))
+    group_items = sorted(selected_groups.items())
+    if tqdm:
+        group_items = tqdm(group_items, desc="selected token row groups", unit="group")
+    open_file: str | None = None
+    parquet = None
+    for (parquet_file, row_group), selected in group_items:
+        if parquet_file != open_file:
+            parquet = pq.ParquetFile(
+                resolved_paths[parquet_file], memory_map=True, pre_buffer=False
+            )
+            open_file = parquet_file
+        assert parquet is not None
+        selected.sort()
+        cursor = 0
+        row_offset = 0
+        for batch in parquet.iter_batches(
+            batch_size=32,
+            row_groups=[row_group],
+            columns=["token_ids"],
+            use_threads=False,
+        ):
+            batch_end = row_offset + batch.num_rows
+            token_column = batch.column(batch.schema.get_field_index("token_ids"))
+            while cursor < len(selected) and selected[cursor][0] < batch_end:
+                row_index, slot = selected[cursor]
+                if row_index >= row_offset:
+                    reservoir[slot]["token_ids"] = array(
+                        "I", token_column[row_index - row_offset].as_py()
+                    )
+                cursor += 1
+            row_offset = batch_end
+            del token_column, batch
+            if cursor == len(selected):
+                break
+        if cursor != len(selected):
+            raise ValueError(
+                f"failed to recover {len(selected) - cursor} selected token rows "
+                f"from {parquet_file} row group {row_group}"
+            )
+        pa.default_memory_pool().release_unused()
+        gc.collect()
+
+    if any("token_ids" not in record for record in reservoir):
+        raise ValueError("selected reservoir contains records without recovered token IDs")
     reservoir.sort(key=lambda row: int(row["_stream_index"]))
     for row in reservoir:
-        row.pop("_stream_index")
+        for key in ["_stream_index", "_row_group", "_row_index"]:
+            row.pop(key)
     return reservoir, candidate_count
 
 
