@@ -7,6 +7,7 @@ import json
 import random
 import secrets
 import time
+from array import array
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -269,6 +270,7 @@ def reservoir_sample_parquet(
 ) -> tuple[list[dict[str, Any]], int]:
     """Uniformly sample a filtered Parquet window with bounded host memory."""
     try:
+        import pyarrow as pa
         import pyarrow.dataset as ds
     except ImportError as exc:
         raise RuntimeError("pyarrow is required for streaming Parquet sampling") from exc
@@ -295,13 +297,15 @@ def reservoir_sample_parquet(
         scanner = dataset.scanner(
             columns=["uid", "batch_idx", "token_ids"],
             filter=(ds.field("batch_idx") >= start) & (ds.field("batch_idx") < end),
-            batch_size=512,
-            use_threads=True,
+            batch_size=128,
+            use_threads=False,
+            batch_readahead=1,
+            fragment_readahead=1,
         )
         batches = scanner.to_batches()
         batch_iter = tqdm(batches, desc=f"{parquet_file} batches", unit="batch", leave=False) if tqdm else batches
         file_candidates = 0
-        for batch in batch_iter:
+        for batch_number, batch in enumerate(batch_iter, start=1):
             uid_column = batch.column(batch.schema.get_field_index("uid"))
             batch_idx_column = batch.column(batch.schema.get_field_index("batch_idx"))
             token_column = batch.column(batch.schema.get_field_index("token_ids"))
@@ -318,7 +322,7 @@ def reservoir_sample_parquet(
                 record = {
                     "uid": str(uid_column[row_index].as_py()),
                     "batch_idx": int(batch_idx_column[row_index].as_py()),
-                    "token_ids": normalize_token_ids(token_column[row_index].as_py()),
+                    "token_ids": array("I", token_column[row_index].as_py()),
                     "source_file": parquet_file,
                     "_stream_index": stream_index,
                 }
@@ -326,6 +330,9 @@ def reservoir_sample_parquet(
                     reservoir.append(record)
                 else:
                     reservoir[slot] = record
+            if batch_number % 64 == 0:
+                pa.default_memory_pool().release_unused()
+        pa.default_memory_pool().release_unused()
         append_jsonl(
             log_path,
             {
@@ -346,7 +353,7 @@ def reservoir_sample_parquet(
 
 
 def build_sample_record(row: dict[str, Any], plan: dict[str, Any], run_dir: Path) -> dict[str, Any]:
-    token_ids = row["token_ids"]
+    token_ids = normalize_token_ids(row["token_ids"])
     window_id = str(plan["window_id"])
     uid = str(row["uid"])
     return {
